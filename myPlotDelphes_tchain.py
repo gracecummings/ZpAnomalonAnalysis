@@ -34,16 +34,18 @@ if __name__=='__main__':
     if mc_dir:
         #inputfiles = [mc_dir+'/Events/run_01/tag_1_delphes_events.root']#Just to make one file
         inputfiles = glob.glob(mc_dir+'*/Events/run_01/tag_1_delphes_events.root')
-        #outfdefault = "myPlotDelphes_sig_output_withcuts.root"
+        outfdefault = mc_dir+"_sig_withcuts"
         print "analyzing the signal sample in ",mc_dir
     if bkg_dir:
         inputfiles = glob.glob(bkg_dir+'*/Events/run_01/tag_1_delphes_events.root')
-        outfdefault = "myPlotDelphes_bkg_output_withcuts.root"
+        outfdefault = bkg_dir+"_bkg_withcuts"
         print "analyzing the background sample in ",bkg_dir
         
     ch = ROOT.TChain("Delphes")#Want to read many trees for more events
     for f in inputfiles:
         ch.Add(f)
+
+    numevents =ch.GetEntries()
 
     #start counters
     evnt_pass_zcut = 0
@@ -53,7 +55,9 @@ if __name__=='__main__':
     #Define TCanvases
     tc  = ROOT.TCanvas('tc','canvas with testing hist',450,450)
     #tc1 = ROOT.TCanvas('tc1','MET canvas',450,450)
-    
+
+    #Hists to Store crap
+    hnevents = ROOT.TH1F('hnevents','number of events',1,0,1)
     #Gen Level Hists
     #hgenjet_pt = ROOT.TH1F('hgenjet_pt','pt of generated, not reco jets',100,0,600)
     #hgenMET    = ROOT.TH1F('hgenMET_mass','Generated MET',100,0,1000)
@@ -213,7 +217,8 @@ if __name__=='__main__':
     if outf:
         output = ROOT.TFile("analysis_output/"+savdir+outf,"RECREATE")
     else:
-        output = ROOT.TFile("analysis_output/"+savdir+outfdefault,"RECREATE")
+        outname = outfdefault+'_'+str(numevents)+'Events.root'
+        output = ROOT.TFile("analysis_output/"+savdir+outname,"RECREATE")
 
     tc.cd()
     hzptvdRmm.Draw()
@@ -224,10 +229,12 @@ if __name__=='__main__':
     #hMET.Draw()
     #tc1.Update()
 
+    hnevents.SetBinContent(1,numevents)
+    hnevents.Write()
     #The saved results
     for hist in hlist:
         hist.Write()
-    
+
     print "number of dilepton containing events, with Zpt > 100 GeV: ",evnt_pass_zcut
     print "number of legit fat jet events, with Zpt > 100 GeV: ",evnt_pass_fatcut
     print "number of legit jet events, with Zpt > 100 GeV: ",evnt_pass_jetcut
