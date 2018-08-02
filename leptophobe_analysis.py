@@ -7,6 +7,18 @@ import ROOT
 import glob
 from math import pi, sqrt
 
+#Generally Useful things
+def xsFromBanner(path):
+    f = open(path,'r')
+    lines = f.readlines()
+    xsline = lines[-9]
+    if "Integrated weight" in xsline:
+        xslineinfo = xsline.split()
+        xs = float(xslineinfo[-1])
+    else:
+        xs = -99999999
+    return xs
+
 #Define functions of fill hists
 def genJetFinder(num_jets,hist_f,chain):
     for jet in range(num_jets):
@@ -23,8 +35,9 @@ def deltaR(vec1,vec2):
 
     return dR
 
-def jetFinder(num_jets,hist2d_fill,hist_fill,hist_mass,chain):
+def jetFinder(num_jets,hist2d_fill,hist_fill,hist_mass,hist_drmu1,hist_drmu2,hist_drpassmu1,hist_drpassmu2,mu1,mu2,chain):
     ljet    = ROOT.TLorentzVector()
+    jvec    = ROOT.TLorentzVector()
     jetlist = []
     numjet = 0
     for jet in range(num_jets):
@@ -34,8 +47,15 @@ def jetFinder(num_jets,hist2d_fill,hist_fill,hist_mass,chain):
         jetdict["eta"]  = chain.GetLeaf("Jet.Eta").GetValue(jet)
         jetdict["phi"]  = chain.GetLeaf("Jet.Phi").GetValue(jet)
         jetdict["m"]    = chain.GetLeaf("Jet.Mass").GetValue(jet)
-        if abs(jetdict["eta"]) < 2.4:
+        jvec.SetPtEtaPhiM(jetdict["pt"],jetdict["eta"],jetdict["phi"],jetdict["m"])
+        dRjetmu1 = deltaR(jvec,mu1)
+        dRjetmu2 = deltaR(jvec,mu2)
+        hist_drmu1.Fill(dRjetmu1)
+        hist_drmu2.Fill(dRjetmu2)
+        if abs(jetdict["eta"]) < 2.4 and dRjetmu1 > 0.4 and dRjetmu2 > 0.4:
             jetlist.append(jetdict)
+            hist_drpassmu1.Fill(dRjetmu1)
+            hist_drpassmu2.Fill(dRjetmu2)
             hist2d_fill.Fill(jetdict["pt"],jetdict["btag"])
             hist_fill.Fill(jetdict["pt"])
             hist_mass.Fill(jetdict["m"])
@@ -46,7 +66,7 @@ def jetFinder(num_jets,hist2d_fill,hist_fill,hist_mass,chain):
         
     return ljet,numjet
         
-def fatJetFinder(num_fat,hnobtaginfo,hist_mass,hist_dr,zvec,chain):
+def fatJetFinder(num_fat,hnobtaginfo,hist_mass,hist_dr,mu1,mu2,zvec,chain):
     lfat = ROOT.TLorentzVector()
     fvec = ROOT.TLorentzVector()
     fatlist = []
@@ -59,7 +79,9 @@ def fatJetFinder(num_fat,hnobtaginfo,hist_mass,hist_dr,zvec,chain):
         fatdict["phi"] = chain.GetLeaf("FatJet.Phi").GetValue(fat)
         fatdict["m"]   = chain.GetLeaf("FatJet.Mass").GetValue(fat)
         fvec.SetPtEtaPhiM(fatdict["pt"],fatdict["eta"],fatdict["phi"],fatdict["m"])
-        if abs(fatdict["eta"]) < 2.4 and deltaR(fvec,zvec) > 0.8:#Z out of range of jet 
+        dRfatmu1 = deltaR(fvec,mu1)
+        dRfatmu2 = deltaR(fvec,mu2)
+        if abs(fatdict["eta"]) < 2.4 and dRfatmu1 > 0.8 and dRfatmu2 > 0.8:#both muons out of range of jet 
             fatlist.append(fatdict)
             hnobtaginfo.Fill(fatdict["pt"])
             hist_mass.Fill(fatdict["m"])
