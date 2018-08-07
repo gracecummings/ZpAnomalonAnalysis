@@ -4,11 +4,11 @@
 
 #normal imports
 from leptophobe_analysis import *
-from math import pi
+from ROOT import *
+from math import pi,sqrt,cos,sin
 from datetime import date
 import os
 import sys
-import ROOT
 import glob
 import argparse
 
@@ -19,34 +19,37 @@ parser = argparse.ArgumentParser()
 #Allows for easier ways to read trees, and runs without errors
 ROOT.gInterpreter.AddIncludePath("/home/gecummings/fermilabrun/delphes")
 ROOT.gInterpreter.AddIncludePath("/home/gecummings/fermilabrun/delphes/external/")
+gROOT.ProcessLine(".L lester_mt2_bisect.h")
 ROOT.gSystem.Load("~/fermilabrun/delphes/libDelphes.so")
+
+MT2Class=asymm_mt2_lester_bisect()
+MT2Class.disableCopyrightMessage()
          
 if __name__=='__main__':
-    parser.add_argument("-s","--signal",help = "signal sample directory base name")
-    parser.add_argument("-b","--bkg", help = "background samply directory base name")
+    parser.add_argument("-s","--signal",help = "sample directory base name")
     parser.add_argument("-o","--output",help = "output file name")
     args = parser.parse_args()
     
     mc_dir  = args.signal#Example: ZpAnomalon_Delphes as argument uses all dir that start with it
-    bkg_dir = args.bkg
     outf    = args.output#name of output file
     
     if mc_dir:
-        #inputfiles = [mc_dir+'/Events/run_01/tag_1_delphes_events.root']#Just to make one file
+        floc = mc_dir+'/Events/run_01/'
+        banpath = floc+'run_01_tag_1_banner.txt'
         inputfiles = glob.glob(mc_dir+'*/Events/run_01/tag_1_delphes_events.root')
-        outfdefault = mc_dir+"_sig_withcuts"
-        print "analyzing the signal sample in ",mc_dir
-    if bkg_dir:
-        inputfiles = glob.glob(bkg_dir+'*/Events/run_01/tag_1_delphes_events.root')
-        outfdefault = bkg_dir+"_bkg_withcuts"
-        print "analyzing the background sample in ",bkg_dir
-        
+        outfdefault = mc_dir+"_withcuts"
+
+    print "reading LHE Level cross section"
+    xs = xsFromBanner(banpath)
+    print "the LHE level cross section is ",xs
+
+    print "analyzing the sample in ",mc_dir
     ch = ROOT.TChain("Delphes")#Want to read many trees for more events
     for f in inputfiles:
         ch.Add(f)
 
     numevents =ch.GetEntries()
-
+    
     #start counters
     evnt_pass_zcut = 0
     evnt_pass_fatcut = 0
@@ -58,6 +61,8 @@ if __name__=='__main__':
 
     #Hists to Store crap
     hnevents = ROOT.TH1F('hnevents','number of events',1,0,1)
+    hxs      = ROOT.TH1F('hxs','generated cross section',1,0,1)
+    
     #Gen Level Hists
     #hgenjet_pt = ROOT.TH1F('hgenjet_pt','pt of generated, not reco jets',100,0,600)
     #hgenMET    = ROOT.TH1F('hgenMET_mass','Generated MET',100,0,1000)
@@ -85,6 +90,8 @@ if __name__=='__main__':
     hz_pt      = ROOT.TH1F('hz_pt','pt of reconstructed Z',37,75,1000)#25 GeV bins
     hz_eta     = ROOT.TH1F('hz_eta','Z Eta',100,-6,6)
     hzptvdRmm  = ROOT.TH2F('hzptvdRmm','Delta R of muon pair vs. Z pt',38,100,1000,100,0,7)
+    hzMET_mt   = ROOT.TH1F('hzMET_mt','Transverse mass of Z and MET',48,0,1200)#25 GeV bins
+    hmt2       = ROOT.TH1F('hmt2','mt2 with missing mass gues 200 GeV',48,0,1200)#25 GeV bins
     
     #Delta angle hists
     hdphi_Zljet   = ROOT.TH1F('hdphi_Zljet','Delta phi between Z and leading AK4 jet',100,0,3.141259)
@@ -119,7 +126,8 @@ if __name__=='__main__':
              hMET_eta,   
              hdimu_mass, 
              hz_pt,      
-             hz_eta,     
+             hz_eta,
+             hzMET_mt,
              hdphi_Zljet,   
              hdphi_ZMET,    
              hdeta_Zljet,   
@@ -132,7 +140,8 @@ if __name__=='__main__':
              hzlf_mass,
              hzlj_mass,
              hdR_mumu,
-             hzptvdRmm]
+             hzptvdRmm,
+             hmt2]
     
     #Loop over all events in TChain
     for i, event in enumerate(ch):
@@ -173,6 +182,8 @@ if __name__=='__main__':
                             hdR_Zlfat.Fill(dRZlfat)
                             #MET manipulations
                             met, metphi, meteta = missingETFinder(ch)
+                            metpx = met*cos(metphi)
+                            metpy = met*sin(metphi)
                             dphiZMET = abs(zreco.Phi()-metphi)
                             #z manipulations
                             hz_pt.Fill(zpt)
@@ -181,6 +192,9 @@ if __name__=='__main__':
                             dRmumu = deltaR(mu1,mu2)
                             hdR_mumu.Fill(dRmumu)
                             hzptvdRmm.Fill(zpt,dRmumu)
+                            #Transverse mass z and MET
+                            mt = findMt(zpt,met,dphiZMET)
+                            hzMET_mt.Fill(mt)
                             
                             if jts_evnt != 0:
                                 ljet,numjet = jetFinder(jts_evnt,hjetbtagvpt,hjet_pt,hjet_mass,hjetm1_alldr,hjetm2_alldr,hdR_mu1jets,hdR_mu2jets,mu1,mu2,ch)
@@ -209,6 +223,13 @@ if __name__=='__main__':
                             hMET.Fill(met)
                             hMET_eta.Fill(meteta)
                             hdimu_mass.Fill(zmass)
+
+                            #mt2, hopefully
+                            mt2 = MT2Class.get_mT2(zreco.M(),zreco.Px(),zreco.Py(),
+                                                   lfat.M(),lfat.Px(),lfat.Py(),
+                                                   metpx,metpy,
+                                                   200,200,0)
+                            hmt2.Fill(mt2)
                     
     #making output files
     savdir = str(date.today())+"/Delphes_analysis_output/"
@@ -221,7 +242,7 @@ if __name__=='__main__':
         output = ROOT.TFile("analysis_output/"+savdir+outname,"RECREATE")
 
     tc.cd()
-    hzptvdRmm.Draw()
+    hmt2.Draw()
     #hjetbtagvpt.Draw()
     #hz_pt.Draw()
     tc.Update()
@@ -231,6 +252,9 @@ if __name__=='__main__':
 
     hnevents.SetBinContent(1,numevents)
     hnevents.Write()
+    hxs.SetBinContent(1,xs)
+    hxs.Write()
+    
     #The saved results
     for hist in hlist:
         hist.Write()
