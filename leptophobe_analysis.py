@@ -5,7 +5,7 @@
 import sys
 import ROOT
 import glob
-from math import pi, sqrt
+from math import pi, sqrt, cos
 
 #Generally Useful things
 def xsFromBanner(path):
@@ -19,13 +19,6 @@ def xsFromBanner(path):
         xs = -99999999
     return xs
 
-#Define functions of fill hists
-def genJetFinder(num_jets,hist_f,chain):
-    for jet in range(num_jets):
-        jet_pt = chain.GetLeaf("GenJet.PT").GetValue(jet)
-        hist_fill.Fill(jet_pt)
-
-
 def deltaR(vec1,vec2):
     v1phi = vec1.Phi()
     v2phi = vec2.Phi()
@@ -35,11 +28,19 @@ def deltaR(vec1,vec2):
 
     return dR
 
+#Define functions of fill hists
+def genJetFinder(num_jets,hist_f,chain):
+    for jet in range(num_jets):
+        jet_pt = chain.GetLeaf("GenJet.PT").GetValue(jet)
+        hist_fill.Fill(jet_pt)
+
+
 def jetFinder(num_jets,hist2d_fill,hist_fill,hist_mass,hist_drmu1,hist_drmu2,hist_drpassmu1,hist_drpassmu2,mu1,mu2,chain):
     ljet    = ROOT.TLorentzVector()
     jvec    = ROOT.TLorentzVector()
     jetlist = []
     numjet = 0
+    ht = 0
     for jet in range(num_jets):
         jetdict = {}
         jetdict["pt"]   = chain.GetLeaf("Jet.PT").GetValue(jet)
@@ -59,12 +60,13 @@ def jetFinder(num_jets,hist2d_fill,hist_fill,hist_mass,hist_drmu1,hist_drmu2,his
             hist2d_fill.Fill(jetdict["pt"],jetdict["btag"])
             hist_fill.Fill(jetdict["pt"])
             hist_mass.Fill(jetdict["m"])
+            ht += jetdict["pt"]
     if jetlist != []:
         ljetdict = max(jetlist, key = lambda jet:jet["pt"])
         ljet.SetPtEtaPhiM(ljetdict["pt"],ljetdict["eta"],ljetdict["phi"],ljetdict["m"])
         numjet = len(jetlist)
         
-    return ljet,numjet
+    return ljet,numjet,ht
         
 def fatJetFinder(num_fat,hnobtaginfo,hist_mass,hist_dr,mu1,mu2,zvec,chain):
     lfat = ROOT.TLorentzVector()
@@ -92,15 +94,6 @@ def fatJetFinder(num_fat,hnobtaginfo,hist_mass,hist_dr,mu1,mu2,zvec,chain):
         numfat = len(fatlist)
         
     return lfat,numfat
-
-#def fatFinder2(numfat,histpt,histmass,zvec,chain):
-#    lfat = ROOT.TLorentzVector()
-#    fatlist = []
-#    passfat  = 0
-#    for fat in range(numfat):
-        
-
-
     
 def genMETFinder(hist_fill,chain):
     genMET  = chain.GetLeaf("GenMissingET.MET").GetValue()
@@ -144,3 +137,9 @@ def diMuonMass(hist_fill,chain):
     hist_fill.Fill(dimu_mass)
 
          
+def findMt(pt,met,dphi):
+    mt = sqrt(2*pt*met*(1-cos(dphi)))
+
+    return mt
+
+#def findMt2():
