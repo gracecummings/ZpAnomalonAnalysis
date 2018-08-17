@@ -28,10 +28,19 @@ MT2Class.disableCopyrightMessage()
 if __name__=='__main__':
     parser.add_argument("-s","--signal",help = "sample directory base name")
     parser.add_argument("-o","--output",help = "output file name")
+    parser.add_argument("-g","--guess",type=float,default = 200,help = "1st guess for NS mass GeV")
     args = parser.parse_args()
     
     mc_dir  = args.signal#Example: ZpAnomalon_Delphes as argument uses all dir that start with it
     outf    = args.output#name of output file
+    gmass   = args.guess
+
+    #Make list for mt2 guess
+    gmasslowest  = gmass - 0.5*gmass
+    gmasslow     = gmass - 0.25*gmass
+    gmasshigh    = gmass + 0.25*gmass
+    gmasshighest = gmass + 0.5*gmass 
+    
     
     if mc_dir:
         floc = mc_dir+'/Events/run_01/'
@@ -81,6 +90,7 @@ if __name__=='__main__':
     hjet_passmulti = ROOT.TH1F('hjet_passmulti','Passing Jet multiplicty for AK4 jets',13,0,13)
     hfat_passmulti = ROOT.TH1F('hfat_passmulti','Passing Fat Jet multiplicty',7,0,7)
     hjetbtagvpt  = ROOT.TH2F('hjetbtagvpt','pt of jet and if btagged',100,0,800,4,0,2)
+    hht        = ROOT.TH1F('hht','ht of AK4 jets',104,0,2600)
     #hfatbtag_pt  = ROOT.TH1F('hfatbtag_pt','pt of all Delphes btag fat jets',200,0,1500)
        
     #MET and Z Hists
@@ -91,7 +101,11 @@ if __name__=='__main__':
     hz_eta     = ROOT.TH1F('hz_eta','Z Eta',100,-6,6)
     hzptvdRmm  = ROOT.TH2F('hzptvdRmm','Delta R of muon pair vs. Z pt',38,100,1000,100,0,7)
     hzMET_mt   = ROOT.TH1F('hzMET_mt','Transverse mass of Z and MET',48,0,1200)#25 GeV bins
-    hmt2       = ROOT.TH1F('hmt2','mt2 with missing mass gues 200 GeV',48,0,1200)#25 GeV bins
+    hmt2g      = ROOT.TH1F('hmt2g','mt2 with missing mass guess '+str(gmass)+'  GeV',48,0,1200)#25 GeV bins
+    hmt2gll    = ROOT.TH1F('hmt2gll','mt2 with missing mass guess '+str(gmasslowest)+'  GeV',48,0,1200)#25 GeV bins
+    hmt2gl     = ROOT.TH1F('hmt2gl','mt2 with missing mass guess '+str(gmasslow)+'  GeV',48,0,1200)#25 GeV bins
+    hmt2gh     = ROOT.TH1F('hmt2gh','mt2 with missing mass guess '+str(gmasshigh)+'  GeV',48,0,1200)#25 GeV bins
+    hmt2ghh    = ROOT.TH1F('hmt2ghh','mt2 with missing mass guess '+str(gmasshighest)+'  GeV',48,0,1200)#25 GeV bins
     
     #Delta angle hists
     hdphi_Zljet   = ROOT.TH1F('hdphi_Zljet','Delta phi between Z and leading AK4 jet',100,0,3.141259)
@@ -141,7 +155,12 @@ if __name__=='__main__':
              hzlj_mass,
              hdR_mumu,
              hzptvdRmm,
-             hmt2]
+             hmt2g,
+             hmt2gll,
+             hmt2gl,
+             hmt2gh,
+             hmt2ghh,
+             hht]
     
     #Loop over all events in TChain
     for i, event in enumerate(ch):
@@ -197,7 +216,7 @@ if __name__=='__main__':
                             hzMET_mt.Fill(mt)
                             
                             if jts_evnt != 0:
-                                ljet,numjet = jetFinder(jts_evnt,hjetbtagvpt,hjet_pt,hjet_mass,hjetm1_alldr,hjetm2_alldr,hdR_mu1jets,hdR_mu2jets,mu1,mu2,ch)
+                                ljet,numjet,ht = jetFinder(jts_evnt,hjetbtagvpt,hjet_pt,hjet_mass,hjetm1_alldr,hjetm2_alldr,hdR_mu1jets,hdR_mu2jets,mu1,mu2,ch)
                                 if ljet.M() != 0:#if passed jet cut
                                     evnt_pass_jetcut +=1
                                     hjet_passmulti.Fill(numjet)
@@ -208,7 +227,7 @@ if __name__=='__main__':
                                     hzlj_mass.Fill(zl.M())
                                     dphiZlj  = abs(zreco.Phi()-ljet.Phi())
                                     detaZlj  = abs(zreco.Eta()-jeteta)
-
+                                    hht.Fill(ht)
                         
                         
                             if dphiZMET > pi:
@@ -225,12 +244,17 @@ if __name__=='__main__':
                             hdimu_mass.Fill(zmass)
 
                             #mt2, hopefully
-                            mt2 = MT2Class.get_mT2(zreco.M(),zreco.Px(),zreco.Py(),
-                                                   lfat.M(),lfat.Px(),lfat.Py(),
-                                                   metpx,metpy,
-                                                   200,200,0)
-                            hmt2.Fill(mt2)
-                    
+                            mt2g = MT2Class.get_mT2(zreco.M(),zreco.Px(),zreco.Py(),lfat.M(),lfat.Px(),lfat.Py(),metpx,metpy,gmass,gmass,0)
+                            mt2gll = MT2Class.get_mT2(zreco.M(),zreco.Px(),zreco.Py(),lfat.M(),lfat.Px(),lfat.Py(),metpx,metpy,gmasslowest,gmasslowest,0)
+                            mt2gl  = MT2Class.get_mT2(zreco.M(),zreco.Px(),zreco.Py(),lfat.M(),lfat.Px(),lfat.Py(),metpx,metpy,gmasslow,gmasslow,0)
+                            mt2gh  = MT2Class.get_mT2(zreco.M(),zreco.Px(),zreco.Py(),lfat.M(),lfat.Px(),lfat.Py(),metpx,metpy,gmasshigh,gmasshigh,0)
+                            mt2ghh = MT2Class.get_mT2(zreco.M(),zreco.Px(),zreco.Py(),lfat.M(),lfat.Px(),lfat.Py(),metpx,metpy,gmasshighest,gmasshighest,0)
+                            hmt2g.Fill(mt2g)
+                            hmt2gll.Fill(mt2gll)
+                            hmt2gl.Fill(mt2gl)
+                            hmt2gh.Fill(mt2gh)
+                            hmt2ghh.Fill(mt2ghh)
+
     #making output files
     savdir = str(date.today())+"/Delphes_analysis_output/"
     if not os.path.exists("analysis_output/"+savdir):
@@ -242,7 +266,18 @@ if __name__=='__main__':
         output = ROOT.TFile("analysis_output/"+savdir+outname,"RECREATE")
 
     tc.cd()
-    hmt2.Draw()
+    hht.Draw()
+    #hmt2g.Draw()
+    #hmt2g.SetLineColor(1)
+    #hmt2gll.Draw("SAME")
+    #hmt2gll.SetLineColor(2)
+    #hmt2gl.Draw("SAME")
+    #hmt2gl.SetLineColor(3)
+    #hmt2gh.Draw("SAME")
+    #hmt2gh.SetLineColor(4)
+    #hmt2ghh.Draw("SAME")
+    #hmt2ghh.SetLineColor(6)
+    tc.SetLogy()
     #hjetbtagvpt.Draw()
     #hz_pt.Draw()
     tc.Update()
