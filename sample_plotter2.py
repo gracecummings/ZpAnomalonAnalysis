@@ -10,10 +10,10 @@
 
 # setup dependencies, use appropriate paths
 from ROOT import *
-gInterpreter.AddIncludePath("/opt/delphes")
-gInterpreter.AddIncludePath("/opt/delphes/external")
+gInterpreter.AddIncludePath("/home/gecummings/fermilabrun/delphes")
+gInterpreter.AddIncludePath("/home/gecummings/fermilabrun/delphes/external")
 gROOT.ProcessLine(".L lester_mt2_bisect.h+")
-gSystem.Load("/opt/delphes/libDelphes.so")
+gSystem.Load("~/fermilabrun/delphes/libDelphes.so")
 
 # utility function to fill a 1D histogram
 # overflows are added to the last bin
@@ -28,9 +28,9 @@ def Fill(h,x,wgt=1):
 #delphes = TChain("Delphes")
 #delphes.Add("Zjets_test2/Events/run_01/tag_1_delphes_events.root")
 # or open a TFile and get the Tree
-tfbkg = TFile("Zjets_test2/Events/run_01/tag_1_delphes_events.root")
+tfbkg = TFile("/home/gecummings/MG5/MG5_aMC_v2_6_2/Zjets_pt100/Events/run_01/tag_1_delphes_events.root")
 ttbkg = tfbkg.Get("Delphes")
-tfsig = TFile("PROC_ZpAnomalonHZ_UFO_0/Events/run_01/tag_1_delphes_events.root")
+tfsig = TFile("/home/gecummings/MG5/MG5_aMC_v2_6_2/ZpAnomalonHZ_Zp2000_ND500_NS200/Events/run_01/tag_1_delphes_events.root")
 ttsig = tfsig.Get("Delphes")
 
 LUMI=100*1000     # = 100 fb-1
@@ -112,12 +112,12 @@ def FillHists(hdict,ttree,wgt=1):
                                 
         
                 # calculate a range of mT2 results, m_chiA = m_ChiB = M_ND
-                for mND in range(50,2501,50):
-                    mt2 = MT2Class.get_mT2(Z2ll.M(),Z2ll.Px(),Z2ll.Py(),
+                #for mND in range(50,2501,50):
+                mt2 = MT2Class.get_mT2(Z2ll.M(),Z2ll.Px(),Z2ll.Py(),
                                            evt.FatJet[0].Mass, fjPx, fjPy,
                                            metx,mety,
-                                           mND,mND)
-                    hdict["mt2"].Fill( mt2 , wgt)
+                                           500,500)
+                hdict["mt2"].Fill( mt2 , wgt)
         
             
 FillHists(dtbkg,ttbkg,WgtBkg)

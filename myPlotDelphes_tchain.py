@@ -29,6 +29,8 @@ if __name__=='__main__':
     parser.add_argument("-s","--signal",help = "sample directory base name")
     parser.add_argument("-o","--output",help = "output file name")
     parser.add_argument("-g","--guess",type=float,default = 200,help = "1st guess for NS mass GeV")
+    #parser.add_argument("-L","--lumi", type=float,default = 35.9, help = "integrated luminosity for scale in fb^-1")
+    #parser.add_argument("-x","--xsec", type=float,help = "desired siganl cross section in fb")
     args = parser.parse_args()
     
     mc_dir  = args.signal#Example: ZpAnomalon_Delphes as argument uses all dir that start with it
@@ -101,11 +103,11 @@ if __name__=='__main__':
     hz_eta     = ROOT.TH1F('hz_eta','Z Eta',100,-6,6)
     hzptvdRmm  = ROOT.TH2F('hzptvdRmm','Delta R of muon pair vs. Z pt',38,100,1000,100,0,7)
     hzMET_mt   = ROOT.TH1F('hzMET_mt','Transverse mass of Z and MET',48,0,1200)#25 GeV bins
-    hmt2g      = ROOT.TH1F('hmt2g','mt2 with missing mass guess '+str(gmass)+'  GeV',48,0,1200)#25 GeV bins
-    hmt2gll    = ROOT.TH1F('hmt2gll','mt2 with missing mass guess '+str(gmasslowest)+'  GeV',48,0,1200)#25 GeV bins
-    hmt2gl     = ROOT.TH1F('hmt2gl','mt2 with missing mass guess '+str(gmasslow)+'  GeV',48,0,1200)#25 GeV bins
-    hmt2gh     = ROOT.TH1F('hmt2gh','mt2 with missing mass guess '+str(gmasshigh)+'  GeV',48,0,1200)#25 GeV bins
-    hmt2ghh    = ROOT.TH1F('hmt2ghh','mt2 with missing mass guess '+str(gmasshighest)+'  GeV',48,0,1200)#25 GeV bins
+    hmt2g      = ROOT.TH1F('hmt2g','mt2 with missing mass guess '+str(gmass)+'  GeV',52,0,1300)#25 GeV bins
+    hmt2gll    = ROOT.TH1F('hmt2gll','mt2 with missing mass guess '+str(gmasslowest)+'  GeV',52,0,1300)#25 GeV bins
+    hmt2gl     = ROOT.TH1F('hmt2gl','mt2 with missing mass guess '+str(gmasslow)+'  GeV',52,0,1300)#25 GeV bins
+    hmt2gh     = ROOT.TH1F('hmt2gh','mt2 with missing mass guess '+str(gmasshigh)+'  GeV',52,0,1300)#25 GeV bins
+    hmt2ghh    = ROOT.TH1F('hmt2ghh','mt2 with missing mass guess '+str(gmasshighest)+'  GeV',52,0,1300)#25 GeV bins
     
     #Delta angle hists
     hdphi_Zljet   = ROOT.TH1F('hdphi_Zljet','Delta phi between Z and leading AK4 jet',100,0,3.141259)
@@ -265,25 +267,39 @@ if __name__=='__main__':
         outname = outfdefault+'_'+str(numevents)+'Events.root'
         output = ROOT.TFile("analysis_output/"+savdir+outname,"RECREATE")
 
+    leg = ROOT.TLegend(0.45,0.60,0.90,0.88)
+        
     tc.cd()
-    hht.Draw()
-    #hmt2g.Draw()
-    #hmt2g.SetLineColor(1)
-    #hmt2gll.Draw("SAME")
-    #hmt2gll.SetLineColor(2)
-    #hmt2gl.Draw("SAME")
-    #hmt2gl.SetLineColor(3)
-    #hmt2gh.Draw("SAME")
-    #hmt2gh.SetLineColor(4)
-    #hmt2ghh.Draw("SAME")
-    #hmt2ghh.SetLineColor(6)
+    #hht.Draw()
+    hmt2g.SetStats(0)
+    mt2max = hmt2g.GetMaximum()
+    hmt2g.SetMaximum(mt2max*100)
+    hmt2g.SetMinimum(0.1)
+    hmt2g.Draw()
+    hmt2g.SetLineColor(1)
+    leg.AddEntry(hmt2g,"missing mass guess "+str(gmass),"l")
+    hmt2gll.Draw("SAME")
+    hmt2gll.SetLineColor(2)
+    leg.AddEntry(hmt2gll,"missing mass guess "+str(gmasslowest),"l")
+    hmt2gl.Draw("SAME")
+    hmt2gl.SetLineColor(3)
+    leg.AddEntry(hmt2gl,"missing mass guess "+str(gmasslow),"l")    
+    hmt2gh.Draw("SAME")
+    hmt2gh.SetLineColor(4)
+    leg.AddEntry(hmt2gh,"missing mass guess "+str(gmasshigh),"l")
+    hmt2ghh.Draw("SAME")
+    hmt2ghh.SetLineColor(6)
+    leg.AddEntry(hmt2ghh,"missing mass guess "+str(gmasshighest),"l")
     tc.SetLogy()
     #hjetbtagvpt.Draw()
     #hz_pt.Draw()
+    leg.SetBorderSize(0)
+    leg.Draw()
     tc.Update()
     #tc1.cd()
     #hMET.Draw()
     #tc1.Update()
+    #tc.SaveAS("analysis_output/"+savdir+outfdefault+"_mt2guess.png")
 
     hnevents.SetBinContent(1,numevents)
     hnevents.Write()

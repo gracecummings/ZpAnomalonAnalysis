@@ -28,6 +28,12 @@ def deltaR(vec1,vec2):
 
     return dR
 
+def findScale(prodnum,lumi,xsec):
+    expnum = xsec*lumi
+    scalefac = expnum/prodnum
+
+    return scalefac
+
 #Define functions of fill hists
 def genJetFinder(num_jets,hist_f,chain):
     for jet in range(num_jets):

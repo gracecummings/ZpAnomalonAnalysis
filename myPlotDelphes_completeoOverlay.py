@@ -87,7 +87,7 @@ if __name__=='__main__':
         savdir = str(date.today())
         if not os.path.exists("analysis_output/"+savdir+"/images"):
             os.makedirs("analysis_output/"+savdir+"/images")
-        pngname = "analysis_output/"+savdir+"/images/"+hname+".png"
+        pngname = "analysis_output/"+savdir+"/images/Zp"+str(mzp)+"_NS"+str(mns)+"_"+hname+".png"
         tc.SaveAs(pngname)
 
 
