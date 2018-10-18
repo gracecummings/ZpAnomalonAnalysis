@@ -62,9 +62,14 @@ if __name__=='__main__':
     numevents =ch.GetEntries()
     
     #start counters
+    evnt_pass_munumcut = 0
+    evnt_pass_muchcut = 0
+    evnt_pass_mukincut = 0
     evnt_pass_zcut = 0
-    evnt_pass_fatcut = 0
-    evnt_pass_jetcut = 0
+    evnt_pass_fatnumcut = 0
+    evnt_pass_fatetacut = 0
+    evnt_pass_jetnumcut = 0
+    evnt_pass_jetetacut = 0
 
     #Define TCanvases
     tc  = ROOT.TCanvas('tc','canvas with testing hist',450,450)
@@ -93,6 +98,7 @@ if __name__=='__main__':
     hfat_passmulti = ROOT.TH1F('hfat_passmulti','Passing Fat Jet multiplicty',7,0,7)
     hjetbtagvpt  = ROOT.TH2F('hjetbtagvpt','pt of jet and if btagged',100,0,800,4,0,2)
     hht        = ROOT.TH1F('hht','ht of AK4 jets',104,0,2600)
+    hhtwl      = ROOT.TH1F('hhtwl','ht of AK4 jets and leptons',104,0,2600)
     #hfatbtag_pt  = ROOT.TH1F('hfatbtag_pt','pt of all Delphes btag fat jets',200,0,1500)
        
     #MET and Z Hists
@@ -112,7 +118,9 @@ if __name__=='__main__':
     #Delta angle hists
     hdphi_Zljet   = ROOT.TH1F('hdphi_Zljet','Delta phi between Z and leading AK4 jet',100,0,3.141259)
     hdphi_ZMET    = ROOT.TH1F('hdphi_ZMET','Delta phi between Z and MET',100,0,3.141259)
+    hdphi_Zlfjet  = ROOT.TH1F('hdphi_Zlfjet','Delta phi between Z and leading AK8 jet',100,0,3.141259)
     hdeta_Zljet   = ROOT.TH1F('hdeta_Zljet','Delta eta between Z and leading AK4 jet',100,0,3.141259)
+    hdeta_Zlfjet  = ROOT.TH1F('hdeta_Zlfjet','Delta eta between Z and leading AK8 jet',100,0,3.141259)
     hdR_Zlfat     = ROOT.TH1F('hdR_Zlfat','Delta R between Z and leading fat jet',100,0,5)
     hdR_Zfats     = ROOT.TH1F('hdR_Zfats','Delta R between Z and all fat jets',100,0,5)
     hjetm1_alldr  = ROOT.TH1F('hjetm1_alldr','Delta R between muon 1 and all jets (no jet cuts)',100,0,5)
@@ -144,9 +152,11 @@ if __name__=='__main__':
              hz_pt,      
              hz_eta,
              hzMET_mt,
-             hdphi_Zljet,   
+             hdphi_Zljet,
+             hdphi_Zlfjet,   
              hdphi_ZMET,    
-             hdeta_Zljet,   
+             hdeta_Zljet,
+             hdeta_Zlfjet,   
              hdR_Zlfat,     
              hdR_Zfats,     
              hjetm1_alldr,  
@@ -162,6 +172,7 @@ if __name__=='__main__':
              hmt2gl,
              hmt2gh,
              hmt2ghh,
+             hhtwl,
              hht]
     
     #Loop over all events in TChain
@@ -175,12 +186,15 @@ if __name__=='__main__':
         fat_evnt  = ch.FatJet.GetEntries()#num fat jets per event
         
         if mus_evnt > 1:
+            evnt_pass_munumcut += 1
             #mu1 is highest pt muon, mu2 is subleading muon
             mu1, mu2 = muonFinder(ch,mus_evnt)
             if( mu1.M() or mu2.M()) == 0:#If for some reason the leading muons have same charge, go to next event. Need better fix
                 print "AHHHH SAME CHARGE MUONS"
                 continue
+            evnt_pass_muchcut +=1
             if mu1.Pt() > 60 and mu2.Pt() > 20 and abs(mu1.Eta()) < 2.4 and abs(mu1.Eta()) < 2.4:
+                evnt_pass_mukincut += 1
                 zreco = mu1 + mu2
                 zpt = zreco.Pt()
                 if zpt >100:#Cut on Zpt
@@ -190,12 +204,16 @@ if __name__=='__main__':
                     evnt_pass_zcut += 1
                     if fat_evnt > 0:#Have to have at least one fat jet
                         lfat,numfat = fatJetFinder(fat_evnt,hfatjet_pt,hfat_mass,hdR_Zfats,mu1,mu2,zreco,ch)
+                        evnt_pass_fatnumcut += 1
                         if lfat.M() != 0:#Has a Jet that passed the eta cut
-                            evnt_pass_fatcut += 1
+                            evnt_pass_fatetacut += 1
                             hfat_passmulti.Fill(numfat)
                             fateta = lfat.Eta()
                             hlfat_eta.Fill(fateta)
                             hlfat_mass.Fill(lfat.M())
+                            fatphi = lfat.Phi()
+                            dphiZlfat = abs(zreco.Phi()-fatphi)
+                            detaZlfat = abs(zreco.Eta()-fateta)
                             #compostie 4 vector manipulations
                             zf = zreco + lfat
                             hzlf_mass.Fill(zf.M())
@@ -218,9 +236,10 @@ if __name__=='__main__':
                             hzMET_mt.Fill(mt)
                             
                             if jts_evnt != 0:
-                                ljet,numjet,ht = jetFinder(jts_evnt,hjetbtagvpt,hjet_pt,hjet_mass,hjetm1_alldr,hjetm2_alldr,hdR_mu1jets,hdR_mu2jets,mu1,mu2,ch)
+                                evnt_pass_jetnumcut += 1
+                                ljet,numjet,ht,htwl = jetFinder(jts_evnt,hjetbtagvpt,hjet_pt,hjet_mass,hjetm1_alldr,hjetm2_alldr,hdR_mu1jets,hdR_mu2jets,mu1,mu2,ch)
                                 if ljet.M() != 0:#if passed jet cut
-                                    evnt_pass_jetcut +=1
+                                    evnt_pass_jetetacut +=1
                                     hjet_passmulti.Fill(numjet)
                                     jeteta = ljet.Eta()
                                     hljet_eta.Fill(jeteta)
@@ -230,17 +249,22 @@ if __name__=='__main__':
                                     dphiZlj  = abs(zreco.Phi()-ljet.Phi())
                                     detaZlj  = abs(zreco.Eta()-jeteta)
                                     hht.Fill(ht)
+                                    hhtwl.Fill(htwl)
                         
                         
                             if dphiZMET > pi:
                                 dphiZMET = 2*pi-dphiZMET
                             if dphiZlj > pi:
                                 dphiZlj = 2*pi-dphiZlj
-
+                            if dphiZlfat >pi:
+                                dphiZlfat = 2*pi-dphiZlfat
+                                
                             #Fill Histograms
                             hdphi_ZMET.Fill(dphiZMET)
                             hdphi_Zljet.Fill(dphiZlj)
+                            hdphi_Zlfjet.Fill(dphiZlfat)
                             hdeta_Zljet.Fill(detaZlj)
+                            hdeta_Zlfjet.Fill(detaZlfat)
                             hMET.Fill(met)
                             hMET_eta.Fill(meteta)
                             hdimu_mass.Fill(zmass)
@@ -310,9 +334,14 @@ if __name__=='__main__':
     for hist in hlist:
         hist.Write()
 
+    print "number of events with > 1 muon ",evnt_pass_munumcut
+    print "number of events with opp charge muons ",evnt_pass_muchcut
+    print "number of events with muons pass kinematic cuts ",evnt_pass_mukincut
     print "number of dilepton containing events, with Zpt > 100 GeV: ",evnt_pass_zcut
-    print "number of legit fat jet events, with Zpt > 100 GeV: ",evnt_pass_fatcut
-    print "number of legit jet events, with Zpt > 100 GeV: ",evnt_pass_jetcut
+    print "number of events with > 0 fat jet ",evnt_pass_fatnumcut
+    print "number of events with fat jets in eta region ",evnt_pass_fatetacut
+    print "number of events with > 0 AK4 jet ",evnt_pass_jetnumcut
+    print "number of events with jets in eta region  ",evnt_pass_jetetacut
     print "hists saved in ",output
     print "hit Enter to exit"
     

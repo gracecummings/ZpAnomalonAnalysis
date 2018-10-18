@@ -47,6 +47,7 @@ def jetFinder(num_jets,hist2d_fill,hist_fill,hist_mass,hist_drmu1,hist_drmu2,his
     jetlist = []
     numjet = 0
     ht = 0
+    htwl = mu1.Pt()+mu2.Pt()
     for jet in range(num_jets):
         jetdict = {}
         jetdict["pt"]   = chain.GetLeaf("Jet.PT").GetValue(jet)
@@ -67,12 +68,13 @@ def jetFinder(num_jets,hist2d_fill,hist_fill,hist_mass,hist_drmu1,hist_drmu2,his
             hist_fill.Fill(jetdict["pt"])
             hist_mass.Fill(jetdict["m"])
             ht += jetdict["pt"]
+            htwl += jetdict["pt"]
     if jetlist != []:
         ljetdict = max(jetlist, key = lambda jet:jet["pt"])
         ljet.SetPtEtaPhiM(ljetdict["pt"],ljetdict["eta"],ljetdict["phi"],ljetdict["m"])
         numjet = len(jetlist)
         
-    return ljet,numjet,ht
+    return ljet,numjet,ht,htwl
         
 def fatJetFinder(num_fat,hnobtaginfo,hist_mass,hist_dr,mu1,mu2,zvec,chain):
     lfat = ROOT.TLorentzVector()
