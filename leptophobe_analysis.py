@@ -5,13 +5,14 @@
 import sys
 import ROOT
 import glob
+import itertools
 from math import pi, sqrt, cos
 
 #Generally Useful things
 def xsFromBanner(path):
     f = open(path,'r')
     lines = f.readlines()
-    xsline = lines[-9]
+    xsline = lines[-9]#switch to -10 for things W related
     if "Integrated weight" in xsline:
         xslineinfo = xsline.split()
         xs = float(xslineinfo[-1])
@@ -33,6 +34,11 @@ def findScale(prodnum,lumi,xsec):
     scalefac = expnum/prodnum
 
     return scalefac
+
+def make4Vector(vdict):
+    v = ROOT.TLorentzVector()
+    v.SetPtEtaPhiM(vdict["pt"],vdict["eta"],vdict["phi"],vdict["m"])
+    return v
 
 #Define functions of fill hists
 def genJetFinder(num_jets,hist_f,chain):
@@ -137,7 +143,46 @@ def muonFinder(chain,mu_num):
         mu2.SetPtEtaPhiM(mu2dict["pt"],mu2dict["eta"],mu2dict["phi"],mu2dict["m"])
 
     return mu1, mu2
-             
+
+
+def zFinder(mulist):
+    veclist  = map(make4Vector,mulist)
+    dimul    = list(itertools.combinations(veclist,2))#makes all combos of 2 muons
+    zmminus  = lambda x : 90.1 - (x[0][0]+x[1][0]).M()
+    masslist = map(zmminus,dimul)
+    mui  = masslist.index(min(masslist))#index of pair closest to Z mass
+    dimu = dimul[mui]
+    mu1  = max(dimu, key = lambda x : x.Pt())
+    mu2  = min(dimu, key = lambda x : x.Pt())
+    
+    return mu1, mu2 
+
+def zmSubtract(dimuon):
+    z = ROOT.TLorentzVector()
+
+def zFinderQ(mulist):#Takes charge into account
+    mu1 = ROOT.TLorentzVector()
+    mu2 = ROOT.TLorentzVector()
+    dimul =  list(itertools.combinations(mulist,2))#makes all combos of 2 muons
+    goodpairs = []
+    for mumu in dimul:
+        if mumu[0]["q"] != mumu[1]["q"]:#if charges are different
+            mumuv = map(make4Vector,mumu)#make muons four vectors
+            goodpairs.append(mumuv)#append the list of the pair to a list
+    if len(goodpairs) == 0:
+        return mu1, mu2
+    #put this in
+    else:
+        zmminus  = lambda x : 90.1 - (x[0]+x[1]).M()
+        masslist = map(zmminus,goodpairs)
+        mui  = masslist.index(min(masslist))#index of pair closest to Z mass
+        dimu = goodpairs[mui]
+        mu1  = max(dimu, key = lambda x : x.Pt())
+        mu2  = min(dimu, key = lambda x : x.Pt())
+        return mu1, mu2
+        
+        
+    
 def diMuonMass(hist_fill,chain):
     mu1, mu2= muonFinder(chain)
     dimu      = mu1+mu2
