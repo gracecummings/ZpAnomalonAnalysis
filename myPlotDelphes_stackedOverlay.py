@@ -38,12 +38,12 @@ if __name__=='__main__':
 
 
     #colors = [kOrange,kOrange+8,kViolet,kViolet+8,kCyan,kCyan-6,kGreen,kPink+7,kViolet+4,632,618]
-    sigcolors  = [kViolet,kViolet+8,kCyan,kCyan-6,kGreen,kGreen-6,kPink+7,kPink+4,kViolet+4,kMagenta-2,kMagenta+3]
+    sigcolors  = [kOrange,kOrange-3,kCyan,kCyan-6,kGreen,kGreen-6,kPink+7,kPink+4,kViolet+4,kMagenta-2,kMagenta+3]
     sigfiles   = []
     sigweights = []
     bkgfiles   = []
     bkginfo = []
-    bkgcolors  = [kAzure-4,kOrange,kAzure-6,kOrange-3]
+    bkgcolors  = [kAzure-4,kViolet,kAzure-6,kViolet+8]
     
     for i,path in enumerate(listsignal):
         sigfiles.append(ROOT.TFile(path))
