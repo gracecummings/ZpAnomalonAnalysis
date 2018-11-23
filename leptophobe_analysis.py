@@ -20,19 +20,88 @@ def xsFromBanner(path):
         xs = -99999999
     return xs
 
+def findNDMass(filename):
+    s1 = filename.split("_")[5]
+    s2 = s1.split("ND")[1]
+    return int(s2)
+
+def findNDMassFromDict(dicinquestion):
+    filename = dicinquestion["fpath"]
+    mnd = findNDMass(filename)
+    return mnd
+
+def findZpMass(filename):
+    s1 = filename.split("_")[4]
+    s2 = s1.split("Zp")[1]
+    return s2
+
+def findZpMassFromDict(dicinquestion):
+    filename = dicinquestion["fpath"]
+    mzp = findZpMass(filename)
+    return mzp
+
+def findSignal(filelist,xschoice,lumi):
+    sigfiles   = []
+    sigweights = []
+    for i,path in enumerate(filelist):
+        sigfiles.append(ROOT.TFile(path))
+        numevents   = sigfiles[i].Get('hnevents').GetBinContent(1)
+        sigxs       = 1000*sigfiles[i].Get('hxs').GetBinContent(1)#converts to fb
+        if xschoice:
+            sigxs = xschoice
+        sigweights.append(findScale(numevents,lumi,sigxs))
+    return sigfiles,sigweights
+
+def organizeSignal(filelist,xschoice,lumi):
+    siginfo  = []
+    sigfiles = []
+    for i,path in enumerate(filelist):
+        sigdict = {}
+        sigfiles.append(ROOT.TFile(path))
+        numevents   = sigfiles[i].Get('hnevents').GetBinContent(1)
+        sigxs       = 1000*sigfiles[i].Get('hxs').GetBinContent(1)#converts to fb
+        if xschoice:
+            sigxs = xschoice
+        sigdict["xs"] = sigxs
+        sigdict["scale"] = findScale(numevents,lumi,sigxs)
+        sigdict["tfile"] = ROOT.TFile(path)
+        sigdict["fpath"] = path
+
+        siginfo.append(sigdict)
+    return siginfo
+
+def organizeBkg(listbkg,lumi):#Returns a dictionary of background info
+    bkginfo  = []
+    bkgfiles = []
+    for i,path in enumerate(listbkg):
+        bkgdict = {}
+        bkgfiles.append(ROOT.TFile(path))
+        numbkg           = bkgfiles[i].Get('hnevents').GetBinContent(1)
+        bkgxs            = 1000*bkgfiles[i].Get('hxs').GetBinContent(1)#converts to fb
+        bkgscale         = findScale(numbkg,lumi,bkgxs)
+        bkgdict["xs"]    = bkgxs
+        bkgdict["scale"] = bkgscale
+        params1          = listbkg[i].split('/')
+        params2          = params1[3].split('_')
+        bkgname          = params2[0]
+        bkgdict["name"]  = bkgname
+        bkgdict["tfile"]  = ROOT.TFile(path)
+        bkginfo.append(bkgdict)
+
+    bkginfo = sorted(bkginfo,key = lambda bkg:bkg["xs"])#This should put least prominent background first
+    return bkginfo
+
 def deltaR(vec1,vec2):
     v1phi = vec1.Phi()
     v2phi = vec2.Phi()
     v1eta = vec1.Eta()
     v2eta = vec2.Eta()
     dR = sqrt((v2phi-v1phi)**2+(v2eta-v1eta)**2)
-
     return dR
 
 def findScale(prodnum,lumi,xsec):
     expnum = xsec*lumi
     scalefac = expnum/prodnum
-
     return scalefac
 
 def make4Vector(vdict):
@@ -45,7 +114,6 @@ def genJetFinder(num_jets,hist_f,chain):
     for jet in range(num_jets):
         jet_pt = chain.GetLeaf("GenJet.PT").GetValue(jet)
         hist_fill.Fill(jet_pt)
-
 
 def jetFinder(num_jets,hist2d_fill,hist_fill,hist_mass,hist_drmu1,hist_drmu2,hist_drpassmu1,hist_drpassmu2,mu1,mu2,chain):
     ljet    = ROOT.TLorentzVector()
