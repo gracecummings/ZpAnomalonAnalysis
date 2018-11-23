@@ -121,13 +121,22 @@ if __name__=='__main__':
         ymlevel = 900
         xmlevel = 450*hori
 
+    lastCanvasdex = hori*2
+
+
+    
     #Make Some Plots
     for key in keys:
         print "analyzing a new key y'all"
         hname = key.GetName()
+
+        #Make the main canvas
         tc = ROOT.TCanvas("tc",hname,xmlevel,ymlevel)
-        tc.SetLogy()
         tc.Divide(hori,2)
+
+        #Make the kg legend
+        ROOT.gStyle.SetLegendBorderSize(0)
+        leg1 = ROOT.TLegend(0,0.69,0.45,0.88)
 
         #Make the stack for the kg
         maxbkg = 0
@@ -145,40 +154,54 @@ if __name__=='__main__':
                 #print "max after setting max ",hbkg.GetMaximum()
                 hbkg.SetMinimum(0.1)
                 hsbkg.Add(hbkg)
-        print "just made that sweet stacked ackground"
+                leg1.AddEntry(hbkg,bkginfo[i]["name"],"f")
+                #print "just made that sweet stacked ackground"
                 #print "stack max with bkg ", hsbkg.GetMaximum()
-                 #leg.AddEntry(hbkg,bkginfo[j]["name"],"f")
 
+        legs = []
         for i,mass in enumerate(sortsig):#for each Zp mass point
             sigmass = []
-            print "running for Zp mass ",mass
-            tc.cd(i)
+            #print "running for Zp mass ",mass
+            tc.cd(i+1)
+            ROOT.gPad.SetLogy()#The pad does not have the setting
+            hsbkg.SetMaximum(maxbkg*2000)
+            hsbkg.SetMinimum(0.1)
+            hsbkg.Draw("HIST")
+
+            #Initialize signal legend
+            legs.append(ROOT.TLegend(0.40,0.60,0.90,0.88))
+            
             for j in range(len(siginfo)):
                 if mass == findZpMass(siginfo[j]["fpath"]):
                     sigmass.append(siginfo[j])
-            print map(findZpMassFromDict,sigmass)
             siginfo.sort(key = findNDMassFromDict)
             for k in range(len(sigmass)):
-                print "looking at ND mass ",findNDMassFromDict(sigmass[k])
+                #print "looking at ND mass ",findNDMassFromDict(sigmass[k])
                 h = sigmass[k]["tfile"].Get(hname)
                 h.SetLineColor(sigcolors[k])
                 h.SetStats(0)
                 h.Scale(sigmass[k]["scale"])
                 #print "max signal sees ",maxbkg*2000
-                hsbkg.Draw("HIST")
-                hsbkg.SetMaximum(10000000)#maxbkg*2000)
-                hsbkg.SetMinimum(0.1)
-                h.SetMaximum(10000000)
+                h.SetMaximum(maxbkg*2000)
                 h.SetMinimum(0.1)
                 h.Draw("HISTSAME")
-                
+            
                 params = sigmass[k]["fpath"].split('_')
                 zpstr  = params[4]
                 ndstr  = params[5]
                 nsstr  = params[6]
-
+                legs[i].AddEntry(h,zpstr+" "+ndstr+" "+nsstr+", "+str(xschoice/1000)+" pb","l")
                 
-        tc.Update()
+                
+                tc.Update()
+
+        for i,leg in enumerate(legs):
+            tc.cd(i+1)
+            leg.Draw()
+            tc.Update()
+            
+        tc.cd(lastCanvasdex)
+        leg1.Draw()
         
         savdir = str(date.today())
         if not os.path.exists("analysis_output/"+savdir+"/images"):
