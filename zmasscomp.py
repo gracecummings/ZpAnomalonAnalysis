@@ -95,7 +95,7 @@ if __name__=='__main__':
     mns        = args.NSmass
     xschoice   = args.xsec
     lum        = args.lumi
-    listsig    = g.glob('analysis_output/2018-11-*/Delphes_analysis_output/ZpAnomalonHZ_Zp*_ND*_NS'+str(mns)+'*')#list of all signal files with appropraite NS mass
+    listsig    = g.glob('analysis_output/2018-1*/Delphes_analysis_output/ZpAnomalonHZ_Zp*_ND*_NS'+str(mns)+'*')#list of all signal files with appropraite NS mass
     cleanedl   = map(findZpMass,listsig)
     sortsig    = list(set(cleanedl))#The different Zp masses featured
     sortsig.sort()
@@ -113,16 +113,21 @@ if __name__=='__main__':
     numpoints = len(sortsig)
     xmlevel = 0
     ymlevel = 0
+    lastCanvasdex = 1
+    ydiv = 0
     if numpoints <= 3:
         ymlevel = 450
-        xmlevel = 450*numpoints
+        xmlevel = 450*numpoints+450
+        lastCanvasdex = numpoints+1
+        hori = numpoints+1
+        ydiv = 1
     else:
         hori = (numpoints + numpoints%2)/2
         ymlevel = 900
         xmlevel = 450*hori
 
-    lastCanvasdex = hori*2
-
+        lastCanvasdex = hori*2
+        ydiv = 2
 
     
     #Make Some Plots
@@ -132,7 +137,7 @@ if __name__=='__main__':
 
         #Make the main canvas
         tc = ROOT.TCanvas("tc",hname,xmlevel,ymlevel)
-        tc.Divide(hori,2)
+        tc.Divide(hori,ydiv)
 
         #Make the kg legend
         ROOT.gStyle.SetLegendBorderSize(0)
@@ -190,7 +195,8 @@ if __name__=='__main__':
                 zpstr  = params[4]
                 ndstr  = params[5]
                 nsstr  = params[6]
-                legs[i].AddEntry(h,zpstr+" "+ndstr+" "+nsstr+", "+str(xschoice/1000)+" pb","l")
+                xsp = xschoice/1000
+                legs[i].AddEntry(h,zpstr+" "+ndstr+" "+nsstr+", "+str(xsp)+" pb","l")
                 
                 
                 tc.Update()
