@@ -20,6 +20,33 @@ def xsFromBanner(path):
         xs = -99999999
     return xs
 
+def xsandgZpFromBanner(path):
+    f = open(path,'r')
+    lines = f.readlines()
+    xsline = lines[-9]#switch to -10 for things W related
+    gZpline = lines[418]#418 for most stuff
+    if "Integrated weight" in xsline:
+        xslineinfo = xsline.split()
+        xs = float(xslineinfo[-1])
+    else:
+        xsline = lines[-10]
+        if "Integrated weight" in xsline:
+            xslineinfo = xsline.split()
+            xs = float(xslineinfo[-1])
+        else:
+            xs = -99999999
+    if "gZp" in gZpline:
+        gZplineinfo = gZpline.split()
+        gZp = float(gZplineinfo[1])
+    else:
+        gZpline = lines[419]
+        if "gZp" in gZpline:
+            gZplineinfo = gZpline.split()
+            gZp = float(gZplineinfo[1])
+        else:
+            gZp = -66666666
+    return xs,gZp
+            
 def findNDMass(filename):
     s1 = filename.split("_")[5]
     s2 = s1.split("ND")[1]
@@ -236,7 +263,8 @@ def zFinderQ(mulist):#Takes charge into account
     for mumu in dimul:
         if mumu[0]["q"] != mumu[1]["q"]:#if charges are different
             mumuv = map(make4Vector,mumu)#make muons four vectors
-            goodpairs.append(mumuv)#append the list of the pair to a list
+            if ((mumuv[0]+mumuv[1]).M() > 70 and (mumuv[0]+mumuv[1]).M() < 110): 
+                goodpairs.append(mumuv)#append the list of the pair to a list
     if len(goodpairs) == 0:
         return mu1, mu2
     #put this in

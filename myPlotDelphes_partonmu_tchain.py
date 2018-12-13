@@ -49,8 +49,9 @@ if __name__=='__main__':
         outfdefault = mc_dir+"_withcuts"
 
     print "reading LHE Level cross section"
-    xs = xsFromBanner(banpath)
+    xs,gzp = xsandgZpFromBanner(banpath)
     print "the LHE level cross section is ",xs
+    print "the Zp coupling is ",gzp
 
     print "analyzing the sample in ",mc_dir
     ch = ROOT.TChain("Delphes")#Want to read many trees for more events
@@ -60,6 +61,8 @@ if __name__=='__main__':
     numevents =ch.GetEntries()
     
     #start counters
+    zpcounter = 0
+    poorzp = 0
     evnt_pass_munumcut = 0
     evnt_pass_muchcut = 0
     evnt_pass_mukincut = 0
@@ -79,6 +82,7 @@ if __name__=='__main__':
     #Hists to Store crap
     hnevents  = ROOT.TH1F('hnevents','number of events',1,0,1)
     hxs       = ROOT.TH1F('hxs','generated cross section',1,0,1)
+    hgzp      = ROOT.TH1F('hgzp','gZp',1,0,1)
     hmuetacut = ROOT.TH1F('hmuetacut','events passing muon eta requirement',1,0,1)
     hgmunumcut = ROOT.TH1F('hmunumcut','events passing muon number requirement',1,0,1)
     hgmuptcut  = ROOT.TH1F('hmuptcut','events passing muon pt requirement',1,0,1)
@@ -90,6 +94,8 @@ if __name__=='__main__':
     #Gen Level Hists
     #hgenjet_pt = ROOT.TH1F('hgenjet_pt','pt of generated, not reco jets',100,0,600)
     #hgenMET    = ROOT.TH1F('hgenMET_mass','Generated MET',100,0,1000)
+    hgenzp_pt   = ROOT.TH1F('hgenzp_pt','Generated Zp pt',100,0,600)
+    hgenzp_mass = ROOT.TH1F('hgenzp_mass','Generated Zp Mass',500,900,2100)
 
     #Jet Hists
     hfatjet_pt = ROOT.TH1F('hfatjet_pt','pt of all Delphes level fat (AK8) jets per event',40,200,1200)#25 Gev Bins
@@ -110,23 +116,24 @@ if __name__=='__main__':
     #hfatbtag_pt  = ROOT.TH1F('hfatbtag_pt','pt of all Delphes btag fat jets',200,0,1500)
        
     #MET and Z Hists
-    hMET       = ROOT.TH1F('hMET','Reconstructed MET',40,0,1000)#25 GeV bins
+    hMET       = ROOT.TH1F('hMET','Reconstructed MET',100,0,1000)#10 GeV bins
     hMET_eta   = ROOT.TH1F('hMET_eta','MET Eta',100,-3,3)
     hdimu_mass = ROOT.TH1F('hdimu_mass','mass of dimuon',100,50,130)
-    hz_pt      = ROOT.TH1F('hz_pt','pt of reconstructed Z',37,75,1000)#25 GeV bins
-    hdz_pt      = ROOT.TH1F('hzd_pt','pt of reconstructed delphes level Z',37,75,1000)#25 GeV bins
+    hz_pt      = ROOT.TH1F('hz_pt','pt of reconstructed Z',93,70,1000)#10 GeV bins
+    hdz_pt     = ROOT.TH1F('hzd_pt','pt of reconstructed delphes level Z',93,70,1000)#10 GeV bins
     hz_eta     = ROOT.TH1F('hz_eta','Z Eta',100,-6,6)
     hzptvdRmm  = ROOT.TH2F('hzptvdRmm','Delta R of muon pair vs. Z pt',38,100,1000,100,0,7)
-    hzMET_mt   = ROOT.TH1F('hzMET_mt','Transverse mass of Z and MET',48,0,1200)#25 GeV bins
-    hmt2g      = ROOT.TH1F('hmt2g','mt2 with missing mass guess '+str(gmass)+'  GeV',52,0,1300)#25 GeV bins
-    hmt2gll    = ROOT.TH1F('hmt2gll','mt2 with missing mass guess '+str(gmasslowest)+'  GeV',52,0,1300)#25 GeV bins
-    hmt2gl     = ROOT.TH1F('hmt2gl','mt2 with missing mass guess '+str(gmasslow)+'  GeV',52,0,1300)#25 GeV bins
-    hmt2gh     = ROOT.TH1F('hmt2gh','mt2 with missing mass guess '+str(gmasshigh)+'  GeV',52,0,1300)#25 GeV bins
-    hmt2ghh    = ROOT.TH1F('hmt2ghh','mt2 with missing mass guess '+str(gmasshighest)+'  GeV',52,0,1300)#25 GeV bins
+    hzMET_mt   = ROOT.TH1F('hzMET_mt','Transverse mass of Z and MET',120,0,1200)#10 GeV bins
+    hmt2g      = ROOT.TH1F('hmt2g','mt2 with missing mass guess '+str(gmass)+'  GeV',130,0,1300)#10 GeV bins
+    hmt2gll    = ROOT.TH1F('hmt2gll','mt2 with missing mass guess '+str(gmasslowest)+'  GeV',130,0,1300)#10 GeV bins
+    hmt2gl     = ROOT.TH1F('hmt2gl','mt2 with missing mass guess '+str(gmasslow)+'  GeV',130,0,1300)#10 GeV bins
+    hmt2gh     = ROOT.TH1F('hmt2gh','mt2 with missing mass guess '+str(gmasshigh)+'  GeV',130,0,1300)#10 GeV bins
+    hmt2ghh    = ROOT.TH1F('hmt2ghh','mt2 with missing mass guess '+str(gmasshighest)+'  GeV',130,0,1300)#10 GeV bins
     
     #Delta angle hists
     hdphi_Zljet   = ROOT.TH1F('hdphi_Zljet','Delta phi between Z and leading AK4 jet',100,0,3.141259)
     hdphi_ZMET    = ROOT.TH1F('hdphi_ZMET','Delta phi between Z and MET',100,0,3.141259)
+    hdphi_hZMET   = ROOT.TH1F('hdphi_hZMET','Delta phi between Z+higgs and MET',100,0,3.141259)
     hdphi_Zlfjet  = ROOT.TH1F('hdphi_Zlfjet','Delta phi between Z and leading AK8 jet',100,0,3.141259)
     hdeta_Zljet   = ROOT.TH1F('hdeta_Zljet','Delta eta between Z and leading AK4 jet',100,0,3.141259)
     hdeta_Zlfjet  = ROOT.TH1F('hdeta_Zlfjet','Delta eta between Z and leading AK8 jet',100,0,3.141259)
@@ -139,8 +146,8 @@ if __name__=='__main__':
     hdR_mumu      = ROOT.TH1F('hdR_mumu','Delta R between muons',100,0,7)
     
     #Composite 4vec masses
-    hzlf_mass = ROOT.TH1F('hzlf_mass','Mass of Z + leading fatjet',98,50,2500)#25 GeV bins
-    hzlj_mass = ROOT.TH1F('hzlj_mass','Mass of Z + leading AK4 jet',98,50,2500)
+    hzlf_mass = ROOT.TH1F('hzlf_mass','Mass of Z + leading fatjet',245,50,2500)#10 GeV bins
+    hzlj_mass = ROOT.TH1F('hzlj_mass','Mass of Z + leading AK4 jet',245,50,2500)
     
     hlist = [hfatjet_pt,
              hjet_pt,    
@@ -164,7 +171,8 @@ if __name__=='__main__':
              hzMET_mt,
              hdphi_Zljet,
              hdphi_Zlfjet,   
-             hdphi_ZMET,    
+             hdphi_ZMET,
+             hdphi_hZMET,    
              hdeta_Zljet,
              hdeta_Zlfjet,   
              hdR_Zlfat,     
@@ -183,11 +191,16 @@ if __name__=='__main__':
              hmt2gh,
              hmt2ghh,
              hhtwl,
-             hht]
+             hht,
+             hgenzp_pt,
+             hgenzp_mass,
+             ]
 
     #Loop over all events in TChain
     for i, event in enumerate(ch):
         mus_evnt = ch.Muon.GetEntries()
+        genmuperevent = 0
+        genzpperevent = 0
         if mus_evnt > 1:
             dmu1, dmu2 = muonFinder(ch,mus_evnt)
             #if ( dmu1.M() or dmu2.M()) == 0:
@@ -206,20 +219,49 @@ if __name__=='__main__':
         gmu2 = TLorentzVector()
         gmulist = []
         goodmu = 0
+        zpfound = 0
         for p in range(parts_evnt):
             pid   = ch.GetLeaf("Particle.PID").GetValue(p)
             pstat = ch.GetLeaf("Particle.Status").GetValue(p)
+            
+            #print "pid: ",pid
+            #print "status: ",pstat
             if abs(pid) == 13:
                 if pstat == 1:
+                    genmuperevent += 1
                     gmudict = {}
                     gmudict["eta"] = ch.GetLeaf("Particle.Eta").GetValue(p)
-                    if abs(gmudict["eta"]) < 2.4: 
+                    gmudict["pt"]  = ch.GetLeaf("Particle.PT").GetValue(p)
+                    if (abs(gmudict["eta"]) < 2.4 and gmudict["pt"] > 20): 
                         gmudict["q"]   = ch.GetLeaf("Particle.Charge").GetValue(p)
-                        gmudict["pt"]  = ch.GetLeaf("Particle.PT").GetValue(p)
                         gmudict["phi"] = ch.GetLeaf("Particle.Phi").GetValue(p)
                         gmudict["m"]   = 0.105 #in GeV
                         gmulist.append(gmudict)
                         goodmu += 1
+            if abs(pid) == 9906663:#This is the madgraph level
+                genzpperevent += 1
+                #print "Zp status ",pstat
+                zpfound = 1
+                if pstat == 44:
+                    zpcounter += 1
+                    zpdict = {}
+                    zp = TLorentzVector()
+                    zpdict["eta"] = ch.GetLeaf("Particle.Eta").GetValue(p)
+                    zpdict["pt"]  = ch.GetLeaf("Particle.PT").GetValue(p)
+                    zpdict["q"]   = ch.GetLeaf("Particle.Charge").GetValue(p)
+                    zpdict["phi"] = ch.GetLeaf("Particle.Phi").GetValue(p)
+                    zpdict["E"]   = ch.GetLeaf("Particle.E").GetValue(p)
+                    hgenzp_pt.Fill(zpdict["pt"])
+                    zp.SetPtEtaPhiE(zpdict["pt"],zpdict["eta"],zpdict["phi"],zpdict["E"])
+                    hgenzp_mass.Fill(zp.M())
+                    zpfound = 1
+                if pstat == (44 or 62):
+                    zpfound = 1
+        if zpfound == 0:
+            print "non  intermediate zp found in event ",i
+            poorzp += 1
+        #print "muons in event ",genmuperevent
+        #print "Zp per event ",genzpperevent
         if goodmu > 0:
             evnt_pass_gmuetacut +=1
             
@@ -256,7 +298,7 @@ if __name__=='__main__':
                             fatphi = lfat.Phi()
                             dphiZlfat = abs(zreco.Phi()-fatphi)
                             detaZlfat = abs(zreco.Eta()-fateta)
-                            #compostie 4 vector manipulations
+                            #composite 4 vector manipulations
                             zf = zreco + lfat
                             hzlf_mass.Fill(zf.M())
                             dRZlfat = deltaR(zreco,lfat)
@@ -266,6 +308,8 @@ if __name__=='__main__':
                             metpx = met*cos(metphi)
                             metpy = met*sin(metphi)
                             dphiZMET = abs(zreco.Phi()-metphi)
+                            dphihZMET = abs((zreco+lfat).Phi()-metphi)
+                            hdphi_hZMET.Fill(dphihZMET)
                             #z manipulations
                             hz_pt.Fill(zpt)
                             hz_eta.Fill(zreco.Eta())
@@ -373,6 +417,8 @@ if __name__=='__main__':
     hnevents.Write()
     hxs.SetBinContent(1,xs)
     hxs.Write()
+    hgzp.SetBinContent(1,gzp)
+    hgzp.Write()
     hmuetacut.SetBinContent(1,evnt_pass_gmuetacut)
     hmuetacut.Write()
     hgmunumcut.SetBinContent(1,evnt_pass_gmunumcut)
@@ -393,6 +439,9 @@ if __name__=='__main__':
         hist.Write()
 
     #print "number of events with > 1 muon ",evnt_pass_munumcut
+    print "numer of good Zprimes ",zpcounter
+    print "numer of ad Zprimes ", poorzp
+    print "total Zprimes ",zpcounter+poorzp
     print "number of parton level events with > 1 muon ",evnt_pass_gmunumcut
     #print "number of events with opp charge muons ",evnt_pass_muchcut
     print "number of parton level events with opp charge muons ",evnt_pass_gmuchcut
