@@ -32,15 +32,16 @@ if __name__=='__main__':
 
     mzp = args.Zpmass
     mns = args.NSmass
-    listsignal = glob.glob('analysis_output/2018-11-0*/Delphes_analysis_output/ZpAnomalonHZ_Zp'+str(mzp)+'_ND*_NS'+str(mns)+'*')#can put back in date thing later
+    listsignal = glob.glob('analysis_output/2019-02-05/Delphes_analysis_output/ZpAnomalonHZ_Zp'+str(mzp)+'_ND*_NS'+str(mns)+'*')#can put back in date thing later
     listsignal.sort(key = findNDMass)
-    listbkg = glob.glob('analysis_output/2018-11-0*/Delphes_analysis_output/*_bkg*')#can put back in date thing later
+    listbkg = glob.glob('analysis_output/2019-02-05/Delphes_analysis_output/*_bkg*')#can put back in date thing later
 
 
     #colors = [kOrange,kOrange+8,kViolet,kViolet+8,kCyan,kCyan-6,kGreen,kPink+7,kViolet+4,632,618]
     sigcolors  = [kOrange,kOrange-3,kCyan,kCyan-6,kGreen,kGreen-6,kPink+7,kPink+4,kViolet+4,kMagenta-2,kMagenta+3]
     sigfiles   = []
     sigweights = []
+    sigxsl     = []
     bkgfiles   = []
     bkginfo = []
     bkgcolors  = [kAzure-4,kViolet,kAzure-6,kViolet+8]
@@ -48,12 +49,17 @@ if __name__=='__main__':
     for i,path in enumerate(listsignal):
         sigfiles.append(ROOT.TFile(path))
         numevents   = sigfiles[i].Get('hnevents').GetBinContent(1)
+        xsp = sigfiles[i].Get('hxs').GetBinContent(1)
+        print path
+        print "THE XS IN P is ",xsp
         sigxs       = 1000*sigfiles[i].Get('hxs').GetBinContent(1)#converts to fb
+        print "THE XS IS ",sigxs
         if args.xsec:
             sigxs = args.xsec
+        print "USED XS ",sigxs
+        sigxsl.append(sigxs)
         sigweights.append(findScale(numevents,args.lumi,sigxs))
 
-        
     for i,path in enumerate(listbkg):
         #print path
         bkgdict = {}
@@ -112,6 +118,8 @@ if __name__=='__main__':
             h = sigfiles[j].Get(hname)
             h.SetLineColor(sigcolors[j])
             h.SetStats(0)
+            print listsignal[j]
+            print "print scale fac used ",sigweights[j]
             h.Scale(sigweights[j])
             #print "max signal sees ",maxbkg*2000
             h.SetMaximum(10000000)
@@ -121,7 +129,7 @@ if __name__=='__main__':
             zpstr  = params[4]
             ndstr  = params[5]
             nsstr  = params[6]
-            leg.AddEntry(h,zpstr+" "+ndstr+" "+nsstr+", "+str(sigxs/1000)+" pb","l")
+            leg.AddEntry(h,zpstr+" "+ndstr+" "+nsstr+", "+str(sigxsl[j]/1000)+" pb","l")
         ROOT.gStyle.SetLegendBorderSize(0)
         leg.Draw()
 
@@ -133,7 +141,7 @@ if __name__=='__main__':
         
 
 
-    print "the max you need to set for the others is ",maxbkg*2000
+    print "you made stacked overlays. good for you, you should fix the error statement"
     
     for f in sigfiles:
         f.Close()

@@ -75,27 +75,35 @@ if __name__=='__main__':
     evnt_pass_gmuchcut  = 0
     evnt_pass_gmuptcut  = 0
     evnt_pass_gmuetacut = 0
+    evnt_pass_metcut    = 0
+    passnozp = 0
     #Define TCanvases
-    tc  = ROOT.TCanvas('tc','canvas with testing hist',450,450)
+    #tc  = ROOT.TCanvas('tc','canvas with testing hist',450,450)
     #tc1 = ROOT.TCanvas('tc1','MET canvas',450,450)
 
     #Hists to Store crap
-    hnevents  = ROOT.TH1F('hnevents','number of events',1,0,1)
-    hxs       = ROOT.TH1F('hxs','generated cross section',1,0,1)
-    hgzp      = ROOT.TH1F('hgzp','gZp',1,0,1)
-    hmuetacut = ROOT.TH1F('hmuetacut','events passing muon eta requirement',1,0,1)
+    hnevents   = ROOT.TH1F('hnevents','number of events',1,0,1)
+    hxs        = ROOT.TH1F('hxs','generated cross section',1,0,1)
+    hgzp       = ROOT.TH1F('hgzp','gZp',1,0,1)
+    hmuetacut  = ROOT.TH1F('hmuetacut','events passing muon eta requirement',1,0,1)
     hgmunumcut = ROOT.TH1F('hmunumcut','events passing muon number requirement',1,0,1)
     hgmuptcut  = ROOT.TH1F('hmuptcut','events passing muon pt requirement',1,0,1)
     hgmuqcut   = ROOT.TH1F('hmuqcut','events passing muon charge requirement',1,0,1)
-    hzptcut   = ROOT.TH1F('hzptcutut','events passing zpt requirement',1,0,1)
-    hfatnumcut= ROOT.TH1F('hfatnumcut','events passing fat jet number requirement',1,0,1)
-    hfatetacut= ROOT.TH1F('hfatetacut','events passing fat jet eta requirement',1,0,1)
-    
+    hzptcut    = ROOT.TH1F('hzptcutut','events passing zpt requirement',1,0,1)
+    hfatnumcut = ROOT.TH1F('hfatnumcut','events passing fat jet number requirement',1,0,1)
+    hfatetacut = ROOT.TH1F('hfatetacut','events passing fat jet eta requirement',1,0,1)
+    hmetcut    = ROOT.TH1F('hmetcut','events passing met > 50 GeV reguirement',1,0,1)
     #Gen Level Hists
     #hgenjet_pt = ROOT.TH1F('hgenjet_pt','pt of generated, not reco jets',100,0,600)
     #hgenMET    = ROOT.TH1F('hgenMET_mass','Generated MET',100,0,1000)
-    hgenzp_pt   = ROOT.TH1F('hgenzp_pt','Generated Zp pt',100,0,600)
+    hgenzp_pt   = ROOT.TH1F('hgenzp_pt','Generated Zp pt',100,0,800)
     hgenzp_mass = ROOT.TH1F('hgenzp_mass','Generated Zp Mass',500,900,2100)
+    hgennd_nozp_pt   = ROOT.TH1F('hgennd_nozp_pt','Generated ND pt, zp lacking events',100,0,800)
+    hgendind_nozp_mass = ROOT.TH1F('hgendind_nozp_mass','Generated diND Mass, zp lacking events',300,500,3500)
+    hgennd_zp_pt   = ROOT.TH1F('hgennd_zp_pt','Generated ND pt, zp events',100,0,800)
+    hgendind_zp_mass = ROOT.TH1F('hgendind_zp_mass','Generated diND Mass, zp events',300,500,3500)
+    hgennd_zp_mass = ROOT.TH1F('hgennd_zp_mass','Generated ND Mass, zp events',80,200,1000)
+    hgennd_nozp_mass = ROOT.TH1F('hgennd_nozp_mass','Generated ND Mass, zp lacking events',80,200,1000)
 
     #Jet Hists
     hfatjet_pt = ROOT.TH1F('hfatjet_pt','pt of all Delphes level fat (AK8) jets per event',40,200,1200)#25 Gev Bins
@@ -194,6 +202,13 @@ if __name__=='__main__':
              hht,
              hgenzp_pt,
              hgenzp_mass,
+             hgennd_nozp_pt,
+             hgendind_nozp_mass,
+             hgennd_zp_pt,
+             hgendind_zp_mass,
+             hgennd_zp_mass,
+             hgennd_nozp_mass,
+             hmetcut
              ]
 
     #Loop over all events in TChain
@@ -217,13 +232,14 @@ if __name__=='__main__':
         parts_evnt = ch.Particle.GetEntries()
         gmu1 = TLorentzVector()
         gmu2 = TLorentzVector()
+        nd   = TLorentzVector()
+        ndd  = TLorentzVector()
         gmulist = []
         goodmu = 0
         zpfound = 0
         for p in range(parts_evnt):
             pid   = ch.GetLeaf("Particle.PID").GetValue(p)
             pstat = ch.GetLeaf("Particle.Status").GetValue(p)
-            
             #print "pid: ",pid
             #print "status: ",pstat
             if abs(pid) == 13:
@@ -242,7 +258,7 @@ if __name__=='__main__':
                 genzpperevent += 1
                 #print "Zp status ",pstat
                 zpfound = 1
-                if pstat == 44:
+                if pstat == 62:
                     zpcounter += 1
                     zpdict = {}
                     zp = TLorentzVector()
@@ -255,11 +271,41 @@ if __name__=='__main__':
                     zp.SetPtEtaPhiE(zpdict["pt"],zpdict["eta"],zpdict["phi"],zpdict["E"])
                     hgenzp_mass.Fill(zp.M())
                     zpfound = 1
-                if pstat == (44 or 62):
+                if pstat == (44 or 22):
                     zpfound = 1
+            if pid == 9936662:#This is the madgraph level ND
+                nddict = {}
+                nddict["eta"] = ch.GetLeaf("Particle.Eta").GetValue(p)
+                nddict["pt"]  = ch.GetLeaf("Particle.PT").GetValue(p)
+                nddict["q"]   = ch.GetLeaf("Particle.Charge").GetValue(p)
+                nddict["phi"] = ch.GetLeaf("Particle.Phi").GetValue(p)
+                nddict["E"]   = ch.GetLeaf("Particle.E").GetValue(p)
+                nd.SetPtEtaPhiE(nddict["pt"],nddict["eta"],nddict["phi"],nddict["E"])
+            if pid == -9936662:#This is the madgraph level ND
+                ndddict = {}
+                ndddict["eta"] = ch.GetLeaf("Particle.Eta").GetValue(p)
+                ndddict["pt"]  = ch.GetLeaf("Particle.PT").GetValue(p)
+                ndddict["q"]   = ch.GetLeaf("Particle.Charge").GetValue(p)
+                ndddict["phi"] = ch.GetLeaf("Particle.Phi").GetValue(p)
+                ndddict["E"]   = ch.GetLeaf("Particle.E").GetValue(p)
+                ndd.SetPtEtaPhiE(ndddict["pt"],ndddict["eta"],ndddict["phi"],nddict["E"])
+                
         if zpfound == 0:
-            print "non  intermediate zp found in event ",i
+            #print "no zp found in event ",i
             poorzp += 1
+            hopezp = ndd+nd
+            hopemass = hopezp.M()
+            hgennd_nozp_pt.Fill(ndd.Pt())
+            hgennd_nozp_pt.Fill(nd.Pt())
+            hgennd_nozp_mass.Fill(ndd.M())
+            hgennd_nozp_mass.Fill(nd.M())
+            hgendind_nozp_mass.Fill(hopemass)
+        if zpfound == 1:
+            hgennd_zp_pt.Fill(ndd.Pt())
+            hgennd_zp_pt.Fill(nd.Pt())
+            hgennd_zp_mass.Fill(ndd.M())
+            hgennd_zp_mass.Fill(nd.M())
+            hgendind_zp_mass.Fill((nd+ndd).M())
         #print "muons in event ",genmuperevent
         #print "Zp per event ",genzpperevent
         if goodmu > 0:
@@ -290,83 +336,95 @@ if __name__=='__main__':
                         lfat,numfat = fatJetFinder(fat_evnt,hfatjet_pt,hfat_mass,hdR_Zfats,gmu1,gmu2,zreco,ch)
                         evnt_pass_fatnumcut += 1
                         if lfat.M() != 0:#Has a Jet that passed the eta cut
-                            evnt_pass_fatetacut += 1
-                            hfat_passmulti.Fill(numfat)
-                            fateta = lfat.Eta()
-                            hlfat_eta.Fill(fateta)
-                            hlfat_mass.Fill(lfat.M())
-                            fatphi = lfat.Phi()
-                            dphiZlfat = abs(zreco.Phi()-fatphi)
-                            detaZlfat = abs(zreco.Eta()-fateta)
-                            #composite 4 vector manipulations
-                            zf = zreco + lfat
-                            hzlf_mass.Fill(zf.M())
-                            dRZlfat = deltaR(zreco,lfat)
-                            hdR_Zlfat.Fill(dRZlfat)
+                            evnt_pass_fatetacut +=1
+                            if zpfound == 0:
+                                #print "event passed, no Zp"
+                                passnozp += 1
                             #MET manipulations
                             met, metphi, meteta = missingETFinder(ch)
-                            metpx = met*cos(metphi)
-                            metpy = met*sin(metphi)
-                            dphiZMET = abs(zreco.Phi()-metphi)
-                            dphihZMET = abs((zreco+lfat).Phi()-metphi)
-                            hdphi_hZMET.Fill(dphihZMET)
-                            #z manipulations
-                            hz_pt.Fill(zpt)
-                            hz_eta.Fill(zreco.Eta())
-                            #muon manipulations
-                            dRmumu = deltaR(gmu1,gmu2)
-                            hdR_mumu.Fill(dRmumu)
-                            hzptvdRmm.Fill(zpt,dRmumu)
-                            #Transverse mass z and MET
-                            mt = findMt(zpt,met,dphiZMET)
-                            hzMET_mt.Fill(mt)
+                            if met > 50:
+                                evnt_pass_metcut += 1
+                                metpx = met*cos(metphi)
+                                metpy = met*sin(metphi)
+                                dphiZMET = abs(zreco.Phi()-metphi)
+                                dphihZMET = abs((zreco+lfat).Phi()-metphi)
+                                hdphi_hZMET.Fill(dphihZMET)
+                                #z manipulations
+                                hz_pt.Fill(zpt)
+                                hz_eta.Fill(zreco.Eta())
+                                #muon manipulations
+                                dRmumu = deltaR(gmu1,gmu2)
+                                hdR_mumu.Fill(dRmumu)
+                                hzptvdRmm.Fill(zpt,dRmumu)
+                                #Transverse mass z and MET
+                                mt = findMt(zpt,met,dphiZMET)
+                                hzMET_mt.Fill(mt)
+                                #Jet stuff
+                                hfat_passmulti.Fill(numfat)
+                                fateta = lfat.Eta()
+                                hlfat_eta.Fill(fateta)
+                                hlfat_mass.Fill(lfat.M())
+                                fatphi = lfat.Phi()
+                                dphiZlfat = abs(zreco.Phi()-fatphi)
+                                detaZlfat = abs(zreco.Eta()-fateta)
+                                #composite 4 vector manipulations
+                                zf = zreco + lfat
+                                hzlf_mass.Fill(zf.M())
+                                dRZlfat = deltaR(zreco,lfat)
+                                hdR_Zlfat.Fill(dRZlfat)
+
                             
-                            if jts_evnt != 0:
-                                evnt_pass_jetnumcut += 1
-                                ljet,numjet,ht,htwl = jetFinder(jts_evnt,hjetbtagvpt,hjet_pt,hjet_mass,hjetm1_alldr,hjetm2_alldr,hdR_mu1jets,hdR_mu2jets,gmu1,gmu2,ch)
-                                if ljet.M() != 0:#if passed jet cut
-                                    evnt_pass_jetetacut +=1
-                                    hjet_passmulti.Fill(numjet)
-                                    jeteta = ljet.Eta()
-                                    hljet_eta.Fill(jeteta)
-                                    hljet_mass.Fill(ljet.M())
-                                    zl = zreco +ljet
-                                    hzlj_mass.Fill(zl.M())
-                                    dphiZlj  = abs(zreco.Phi()-ljet.Phi())
-                                    detaZlj  = abs(zreco.Eta()-jeteta)
-                                    hht.Fill(ht)
-                                    hhtwl.Fill(htwl)
+                                if jts_evnt != 0:
+                                    evnt_pass_jetnumcut += 1
+                                    ljet,numjet,ht,htwl = jetFinder(jts_evnt,hjetbtagvpt,hjet_pt,hjet_mass,hjetm1_alldr,hjetm2_alldr,hdR_mu1jets,hdR_mu2jets,gmu1,gmu2,ch)
+                                    if ljet.M() != 0:#if passed jet cut
+                                        evnt_pass_jetetacut +=1
+                                        hjet_passmulti.Fill(numjet)
+                                        jeteta = ljet.Eta()
+                                        hljet_eta.Fill(jeteta)
+                                        hljet_mass.Fill(ljet.M())
+                                        zl = zreco +ljet
+                                        hzlj_mass.Fill(zl.M())
+                                        dphiZlj  = abs(zreco.Phi()-ljet.Phi())
+                                        detaZlj  = abs(zreco.Eta()-jeteta)
+                                        hht.Fill(ht)
+                                        hhtwl.Fill(htwl)
                         
                         
-                            if dphiZMET > pi:
-                                dphiZMET = 2*pi-dphiZMET
-                            if dphiZlj > pi:
-                                dphiZlj = 2*pi-dphiZlj
-                            if dphiZlfat >pi:
-                                dphiZlfat = 2*pi-dphiZlfat
-                                                    
-                            #Fill Histograms
-                            hdphi_ZMET.Fill(dphiZMET)
-                            hdphi_Zljet.Fill(dphiZlj)
-                            hdphi_Zlfjet.Fill(dphiZlfat)
-                            hdeta_Zljet.Fill(detaZlj)
-                            hdeta_Zlfjet.Fill(detaZlfat)
-                            hMET.Fill(met)
-                            hMET_eta.Fill(meteta)
-                            hdimu_mass.Fill(zmass)
+                                        if dphiZMET > pi:
+                                            dphiZMET = 2*pi-dphiZMET
+                                        if dphiZlj > pi:
+                                            dphiZlj = 2*pi-dphiZlj
+                                        if dphiZlfat >pi:
+                                            dphiZlfat = 2*pi-dphiZlfat
+                                            
+                                #Fill Histograms
+                                hdphi_ZMET.Fill(dphiZMET)
+                                hdphi_Zljet.Fill(dphiZlj)
+                                hdphi_Zlfjet.Fill(dphiZlfat)
+                                hdeta_Zljet.Fill(detaZlj)
+                                hdeta_Zlfjet.Fill(detaZlfat)
+                                hMET.Fill(met)
+                                hMET_eta.Fill(meteta)
+                                hdimu_mass.Fill(zmass)
                             
-                            #mt2, hopefully
-                            mt2g = MT2Class.get_mT2(zreco.M(),zreco.Px(),zreco.Py(),lfat.M(),lfat.Px(),lfat.Py(),metpx,metpy,gmass,gmass,0)
-                            mt2gll = MT2Class.get_mT2(zreco.M(),zreco.Px(),zreco.Py(),lfat.M(),lfat.Px(),lfat.Py(),metpx,metpy,gmasslowest,gmasslowest,0)
-                            mt2gl  = MT2Class.get_mT2(zreco.M(),zreco.Px(),zreco.Py(),lfat.M(),lfat.Px(),lfat.Py(),metpx,metpy,gmasslow,gmasslow,0)
-                            mt2gh  = MT2Class.get_mT2(zreco.M(),zreco.Px(),zreco.Py(),lfat.M(),lfat.Px(),lfat.Py(),metpx,metpy,gmasshigh,gmasshigh,0)
-                            mt2ghh = MT2Class.get_mT2(zreco.M(),zreco.Px(),zreco.Py(),lfat.M(),lfat.Px(),lfat.Py(),metpx,metpy,gmasshighest,gmasshighest,0)
-                            hmt2g.Fill(mt2g)
-                            hmt2gll.Fill(mt2gll)
-                            hmt2gl.Fill(mt2gl)
-                            hmt2gh.Fill(mt2gh)
-                            hmt2ghh.Fill(mt2ghh)
-   
+                                #mt2, hopefully
+                                mt2g = MT2Class.get_mT2(zreco.M(),zreco.Px(),zreco.Py(),lfat.M(),lfat.Px(),lfat.Py(),metpx,metpy,gmass,gmass,0)
+                                mt2gll = MT2Class.get_mT2(zreco.M(),zreco.Px(),zreco.Py(),lfat.M(),lfat.Px(),lfat.Py(),metpx,metpy,gmasslowest,gmasslowest,0)
+                                mt2gl  = MT2Class.get_mT2(zreco.M(),zreco.Px(),zreco.Py(),lfat.M(),lfat.Px(),lfat.Py(),metpx,metpy,gmasslow,gmasslow,0)
+                                mt2gh  = MT2Class.get_mT2(zreco.M(),zreco.Px(),zreco.Py(),lfat.M(),lfat.Px(),lfat.Py(),metpx,metpy,gmasshigh,gmasshigh,0)
+                                mt2ghh = MT2Class.get_mT2(zreco.M(),zreco.Px(),zreco.Py(),lfat.M(),lfat.Px(),lfat.Py(),metpx,metpy,gmasshighest,gmasshighest,0)
+                                hmt2g.Fill(mt2g)
+                                hmt2gll.Fill(mt2gll)
+                                hmt2gl.Fill(mt2gl)
+                                hmt2gh.Fill(mt2gh)
+                                hmt2ghh.Fill(mt2ghh)
+
+                                #Razor
+                                et1 = sqrt(zf.M()*zf.M()+zf.Pt()*zf.Pt())
+                                et2 = met
+                                mR = sqrt((zreco.E()+lfat.E())*(zreco.E()+lfat.E())-(zreco.Pz()+lfat.Pz())*(zreco.Pz()+llfat.Pz()))
+                                
     
 
     #making output files
@@ -381,33 +439,33 @@ if __name__=='__main__':
 
     leg = ROOT.TLegend(0.45,0.60,0.90,0.88)
         
-    tc.cd()
+    #tc.cd()
     #hht.Draw()
-    hmt2g.SetStats(0)
-    mt2max = hmt2g.GetMaximum()
-    hmt2g.SetMaximum(mt2max*100)
-    hmt2g.SetMinimum(0.1)
-    hmt2g.Draw()
-    hmt2g.SetLineColor(1)
-    leg.AddEntry(hmt2g,"missing mass guess "+str(gmass),"l")
-    hmt2gll.Draw("SAME")
-    hmt2gll.SetLineColor(2)
-    leg.AddEntry(hmt2gll,"missing mass guess "+str(gmasslowest),"l")
-    hmt2gl.Draw("SAME")
-    hmt2gl.SetLineColor(3)
-    leg.AddEntry(hmt2gl,"missing mass guess "+str(gmasslow),"l")    
-    hmt2gh.Draw("SAME")
-    hmt2gh.SetLineColor(4)
-    leg.AddEntry(hmt2gh,"missing mass guess "+str(gmasshigh),"l")
-    hmt2ghh.Draw("SAME")
-    hmt2ghh.SetLineColor(6)
-    leg.AddEntry(hmt2ghh,"missing mass guess "+str(gmasshighest),"l")
-    tc.SetLogy()
+    #hmt2g.SetStats(0)
+    #mt2max = hmt2g.GetMaximum()
+    #hmt2g.SetMaximum(mt2max*100)
+    #hmt2g.SetMinimum(0.1)
+    #hmt2g.Draw()
+    #hmt2g.SetLineColor(1)
+    #leg.AddEntry(hmt2g,"missing mass guess "+str(gmass),"l")
+    #hmt2gll.Draw("SAME")
+    #hmt2gll.SetLineColor(2)
+    #leg.AddEntry(hmt2gll,"missing mass guess "+str(gmasslowest),"l")
+    #hmt2gl.Draw("SAME")
+    #hmt2gl.SetLineColor(3)
+    #leg.AddEntry(hmt2gl,"missing mass guess "+str(gmasslow),"l")    
+    #hmt2gh.Draw("SAME")
+    #hmt2gh.SetLineColor(4)
+    #leg.AddEntry(hmt2gh,"missing mass guess "+str(gmasshigh),"l")
+    #hmt2ghh.Draw("SAME")
+    #hmt2ghh.SetLineColor(6)
+    #leg.AddEntry(hmt2ghh,"missing mass guess "+str(gmasshighest),"l")
+    #tc.SetLogy()
     #hjetbtagvpt.Draw()
     #hz_pt.Draw()
-    leg.SetBorderSize(0)
-    leg.Draw()
-    tc.Update()
+    #leg.SetBorderSize(0)
+    #leg.Draw()
+    #tc.Update()
     #tc1.cd()
     #hMET.Draw()
     #tc1.Update()
@@ -433,6 +491,8 @@ if __name__=='__main__':
     hfatnumcut.Write()
     hfatetacut.SetBinContent(1,evnt_pass_fatetacut)
     hfatetacut.Write()
+    hmetcut.SetBinContent(1,evnt_pass_metcut)
+    hmetcut.Write()
     
     #The saved results
     for hist in hlist:
@@ -441,6 +501,7 @@ if __name__=='__main__':
     #print "number of events with > 1 muon ",evnt_pass_munumcut
     print "numer of good Zprimes ",zpcounter
     print "numer of ad Zprimes ", poorzp
+    print "numer of ad zpevents that passed ",passnozp
     print "total Zprimes ",zpcounter+poorzp
     print "number of parton level events with > 1 muon ",evnt_pass_gmunumcut
     #print "number of events with opp charge muons ",evnt_pass_muchcut
@@ -450,11 +511,12 @@ if __name__=='__main__':
     print "number of parton level dilepton containing events, with Zpt > 100 GeV: ",evnt_pass_zcut
     print "number of events with > 0 fat jet ",evnt_pass_fatnumcut
     print "number of events with fat jets in eta region ",evnt_pass_fatetacut
-    print "number of events with > 0 AK4 jet ",evnt_pass_jetnumcut
-    print "number of events with jets in eta region  ",evnt_pass_jetetacut
+    #print "number of events with > 0 AK4 jet ",evnt_pass_jetnumcut
+    #print "number of events with jets in eta region  ",evnt_pass_jetetacut
+    print "numer of events passed met > 50 cut ",evnt_pass_metcut
     print "hists saved in ",output
-    print "hit Enter to exit"
+    #print "hit Enter to exit"
     
-    sys.stdin.readline()#Keeps canvas open
+    #sys.stdin.readline()#Keeps canvas open
         
     output.Close()
