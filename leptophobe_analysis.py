@@ -12,7 +12,7 @@ from math import pi, sqrt, cos
 def xsFromBanner(path):
     f = open(path,'r')
     lines = f.readlines()
-    xsline = lines[-9]#switch to -10 for things W related
+    xsline = lines[-9]#switch to -10 for things W related, -9 otherwise
     if "Integrated weight" in xsline:
         xslineinfo = xsline.split()
         xs = float(xslineinfo[-1])
@@ -135,6 +135,16 @@ def make4Vector(vdict):
     v = ROOT.TLorentzVector()
     v.SetPtEtaPhiM(vdict["pt"],vdict["eta"],vdict["phi"],vdict["m"])
     return v
+
+def make4vectorch(chain,particle):
+    dic = {}
+    vec = TLorentzVector()
+    dic["eta"] = chain.GetLeaf("Particle.Eta").GetValue(particle)
+    dic["pt"]  = chain.GetLeaf("Particle.PT").GetValue(particle)
+    dic["phi"] = chain.GetLeaf("Particle.Phi").GetValue(particle)
+    dic["E"]   = chain.GetLeaf("Particle.E").GetValue(particle)
+    vec.SetPtEtaPhiE(dic["pt"],dic["eta"],dic["phi"],dic["E"])
+    return vec
 
 #Define functions of fill hists
 def genJetFinder(num_jets,hist_f,chain):

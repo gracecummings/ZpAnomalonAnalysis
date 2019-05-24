@@ -93,14 +93,22 @@ if __name__=='__main__':
     hfatnumcut = ROOT.TH1F('hfatnumcut','events passing fat jet number requirement',1,0,1)
     hfatetacut = ROOT.TH1F('hfatetacut','events passing fat jet eta requirement',1,0,1)
     hmetcut    = ROOT.TH1F('hmetcut','events passing met > 50 GeV reguirement',1,0,1)
+
     #Gen Level Hists
     #hgenjet_pt = ROOT.TH1F('hgenjet_pt','pt of generated, not reco jets',100,0,600)
     #hgenMET    = ROOT.TH1F('hgenMET_mass','Generated MET',100,0,1000)
-    hgenzp_pt   = ROOT.TH1F('hgenzp_pt','Generated Zp pt',100,0,800)
+    hgenzp_pt   = ROOT.TH1F('hgenzp_pt','Generated Zp pt',100,0,1000)#orignally went to 800
+    hgenzp_phi   = ROOT.TH1F('hgenzp_phi','Generated Zp phi',100,-3.2,3.2)
+    hgenzp_eta   = ROOT.TH1F('hgenzp_eta','Generated Zp eta',100,-5,5)
     hgenzp_mass = ROOT.TH1F('hgenzp_mass','Generated Zp Mass',500,900,2100)
+    
     hgennd_nozp_pt   = ROOT.TH1F('hgennd_nozp_pt','Generated ND pt, zp lacking events',100,0,800)
     hgendind_nozp_mass = ROOT.TH1F('hgendind_nozp_mass','Generated diND Mass, zp lacking events',300,500,3500)
-    hgennd_zp_pt   = ROOT.TH1F('hgennd_zp_pt','Generated ND pt, zp events',100,0,800)
+    
+    hgennd_zp_pt   = ROOT.TH1F('hgennd_zp_pt','Generated ND pt, zp events',100,0,1500)#originally went to 800
+    hgennd_zp_phi   = ROOT.TH1F('hgennd_zp_phi','Generated ND phi, zp events',100,-3.2,3.2)
+    hgennd_zp_eta   = ROOT.TH1F('hgennd_zp_eta','Generated ND eta, zp events',100,-5,5)
+    
     hgendind_zp_mass = ROOT.TH1F('hgendind_zp_mass','Generated diND Mass, zp events',300,500,3500)
     hgennd_zp_mass = ROOT.TH1F('hgennd_zp_mass','Generated ND Mass, zp events',80,200,1000)
     hgennd_nozp_mass = ROOT.TH1F('hgennd_nozp_mass','Generated ND Mass, zp lacking events',80,200,1000)
@@ -137,6 +145,13 @@ if __name__=='__main__':
     hmt2gl     = ROOT.TH1F('hmt2gl','mt2 with missing mass guess '+str(gmasslow)+'  GeV',130,0,1300)#10 GeV bins
     hmt2gh     = ROOT.TH1F('hmt2gh','mt2 with missing mass guess '+str(gmasshigh)+'  GeV',130,0,1300)#10 GeV bins
     hmt2ghh    = ROOT.TH1F('hmt2ghh','mt2 with missing mass guess '+str(gmasshighest)+'  GeV',130,0,1300)#10 GeV bins
+
+    #Razor
+    hmr1 = ROOT.TH1F('hmr1','mR with 3 momenta',150,300,1800)#10 GeV
+    hmr2 = ROOT.TH1F('hmr2','mR with energy',150,300,1800)#10 GeV
+    hmrt = ROOT.TH1F('hmrt','mRT',130,0,1300)#10 GeV
+    hr1var= ROOT.TH1F('hr1var','Razor mRT/mR1',20,0,2)
+    hr2var= ROOT.TH1F('hr2var','Razor mRT/mR2',20,0,2)
     
     #Delta angle hists
     hdphi_Zljet   = ROOT.TH1F('hdphi_Zljet','Delta phi between Z and leading AK4 jet',100,0,3.141259)
@@ -201,14 +216,23 @@ if __name__=='__main__':
              hhtwl,
              hht,
              hgenzp_pt,
+             hgenzp_phi,
+             hgenzp_eta,
              hgenzp_mass,
              hgennd_nozp_pt,
              hgendind_nozp_mass,
              hgennd_zp_pt,
+             hgennd_zp_phi,
+             hgennd_zp_eta,
              hgendind_zp_mass,
              hgennd_zp_mass,
              hgennd_nozp_mass,
-             hmetcut
+             hmetcut,
+             hmr1,
+             hmr2,
+             hmrt,
+             hr1var,
+             hr2var
              ]
 
     #Loop over all events in TChain
@@ -268,6 +292,8 @@ if __name__=='__main__':
                     zpdict["phi"] = ch.GetLeaf("Particle.Phi").GetValue(p)
                     zpdict["E"]   = ch.GetLeaf("Particle.E").GetValue(p)
                     hgenzp_pt.Fill(zpdict["pt"])
+                    hgenzp_phi.Fill(zpdict["phi"])
+                    hgenzp_eta.Fill(zpdict["eta"])
                     zp.SetPtEtaPhiE(zpdict["pt"],zpdict["eta"],zpdict["phi"],zpdict["E"])
                     hgenzp_mass.Fill(zp.M())
                     zpfound = 1
@@ -303,6 +329,10 @@ if __name__=='__main__':
         if zpfound == 1:
             hgennd_zp_pt.Fill(ndd.Pt())
             hgennd_zp_pt.Fill(nd.Pt())
+            hgennd_zp_phi.Fill(nd.Phi())
+            hgennd_zp_phi.Fill(ndd.Phi())
+            hgennd_zp_eta.Fill(nd.Eta())
+            hgennd_zp_eta.Fill(ndd.Eta())
             hgennd_zp_mass.Fill(ndd.M())
             hgennd_zp_mass.Fill(nd.M())
             hgendind_zp_mass.Fill((nd+ndd).M())
@@ -421,11 +451,18 @@ if __name__=='__main__':
                                 hmt2ghh.Fill(mt2ghh)
 
                                 #Razor
-                                et1 = sqrt(zf.M()*zf.M()+zf.Pt()*zf.Pt())
-                                et2 = met
-                                mR = sqrt((zreco.E()+lfat.E())*(zreco.E()+lfat.E())-(zreco.Pz()+lfat.Pz())*(zreco.Pz()+llfat.Pz()))
-                                
-    
+                                z3p  = zreco.P()
+                                h3p  = lfat.P()
+                                mr1  = sqrt((z3p+h3p)**2-(zreco.Pz()+lfat.Pz())**2)
+                                mrt1 = sqrt(0.5*(met*(zpt+lfat.Pt())-(met*sin(metphi)*zf.Py()+met*cos(metphi)*zf.Px())))
+                                r1   = mrt1/mr1
+                                mr2  = sqrt(zf.Energy()**2-zf.Pz()**2)
+                                r2   = mrt1/mr2
+                                hmr1.Fill(mr1)
+                                hmr2.Fill(mr2)
+                                hmrt.Fill(mrt1)
+                                hr1var.Fill(r1)
+                                hr2var.Fill(r2)
 
     #making output files
     savdir = str(date.today())+"/Delphes_analysis_output/"
